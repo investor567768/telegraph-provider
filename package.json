@@ -1,0 +1,9 @@
+{
+  "name": "telegraph-provider",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Telegraph Provider (miner): keyless public-data answers for H2 mission Intents",
+  "engines": { "node": ">=18" },
+  "scripts": { "test": "node --test test/*.test.js" }
+}
