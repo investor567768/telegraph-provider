@@ -1,0 +1,128 @@
+version: "1"
+kind: miner
+id: 7319205
+slug: chrysolite-telegraph-provider
+protocol: generic
+name: Telegraph Provider (CAISO, NYISO, MISO grid prices)
+description: >-
+  Answers with prices read directly from official public sources, never estimated.
+  Grid power: wholesale electricity prices (LMP) in USD per MWh from three US grid
+  operators: CAISO day-ahead hourly (trading hubs and any node, any date), NYISO
+  real-time 5-minute and day-ahead hourly (11 zones), and MISO real-time 5-minute
+  (8 trading hubs and any node). Every answer names the operator, the exact interval
+  in UTC, the price components, the operator's own time stamp and the source file.
+base_url: https://telegraph-provider.vercel.app
+
+rate_limit_per_sec: 5
+cache_ttl_sec: 0
+circuit_threshold: 5
+circuit_cooldown_seconds: 30
+
+docs:
+  repository: https://github.com/investor567768/telegraph-provider
+  documentation: https://github.com/investor567768/telegraph-provider#readme
+
+errors:
+  message_path: error
+
+endpoints:
+  - path: /grid-price
+    external_path: /api/grid-price
+    method: GET
+    description: >-
+      Wholesale electricity price (LMP, USD per MWh) for one grid location and one
+      settlement interval, read from the grid operator's own public price file.
+      CAISO: day-ahead hourly LMP from OASIS, any date; a question naming only "CAISO"
+      is answered for the NP15 trading hub. NYISO zones: real-time 5-minute and day-ahead
+      hourly. MISO hubs and nodes: real-time 5-minute, current day. Returns the interval
+      containing interval_start, or the latest one when it is omitted. Locations run by
+      other operators (ERCOT, PJM, ISO-NE, SPP) return HTTP 404 with a reason, never a guess.
+    intents: [GRID_POWER_PRICE_GENERAL]
+    params:
+      query:
+        required:
+          - name: node_or_zone
+            type: string
+            intents: ["*"]
+            description: >-
+              The grid location, as the operator names it or by a common name.
+              CAISO: "CAISO" alone (means the NP15 hub), NP15, SP15 or ZP26 (trading hubs
+              TH_NP15_GEN-APND, TH_SP15_GEN-APND, TH_ZP26_GEN-APND), or any CAISO node by its
+              exact OASIS name, for example DLAP_PGAE-APND. NYISO zones by official name or letter: WEST (A),
+              GENESE (B), CENTRL (C), NORTH (D), MHK VL (E), CAPITL (F), HUD VL (G),
+              MILLWD (H), DUNWOD (I), N.Y.C. (J, also "NYC" or "New York City"),
+              LONGIL (K). MISO trading hubs: ILLINOIS.HUB, INDIANA.HUB, LOUISIANA.HUB,
+              MICHIGAN.HUB, MINN.HUB, MS.HUB, TEXAS.HUB, ARKANSAS.HUB (also "MISO Indiana hub").
+              Any MISO node by its exact operator name, for example AMIL.EDWARDS2.
+        optional:
+          - name: interval_start
+            type: string
+            intents: ["*"]
+            description: >-
+              Start of the settlement interval, ISO 8601 / RFC 3339 in UTC, for example
+              2026-09-13T14:00:00Z. A time without a zone is read as UTC. Any time inside
+              an interval selects that interval (CAISO and NYISO day-ahead intervals are
+              one hour, real-time intervals five minutes). Omit it for the latest interval.
+              MISO real-time prices are only available for the current operating day.
+          - name: market
+            type: string
+            intents: ["*"]
+            description: >-
+              Which market's price. Defaults to day_ahead for CAISO and real_time for
+              NYISO and MISO.
+            accepted_fields:
+              - value: real_time
+                intents: ["*"]
+                description: Real-time 5-minute price (NYISO and MISO; not CAISO).
+              - value: day_ahead
+                intents: ["*"]
+                description: Day-ahead hourly price (CAISO and NYISO; not MISO).
+
+intent_mapping:
+  GRID_POWER_PRICE_GENERAL:
+    endpoint: /grid-price
+    input:
+      node_or_zone:
+        from: node_or_zone
+        how: >-
+          The grid location as the question names it, for example CAISO, NP15, SP15,
+          N.Y.C., NYISO zone J or MISO INDIANA.HUB. If the question names only a grid
+          operator, write the operator, for example CAISO.
+      interval_start:
+        from: interval_start
+        time_format: rfc3339
+    output:
+      lmp_usd_per_mwh: { path: lmp_usd_per_mwh }
+      node_or_zone: { path: node_or_zone }
+      market: { path: market }
+      interval_start: { path: interval_start }
+      currency: { path: currency }
+
+semantics:
+  signal_mapping:
+    confidence_field: confidence
+    label_field: verdict
+    reason_field: reason
+  supported_intents:
+    - GRID_POWER_PRICE_GENERAL
+
+output_schema:
+  type: object
+  properties:
+    lmp_usd_per_mwh: { type: number }
+    node_or_zone: { type: string }
+    market: { type: string }
+    interval_start: { type: string }
+    interval_end: { type: string }
+    currency: { type: string }
+    operator: { type: string }
+    marginal_cost_losses_usd_per_mwh: { type: number }
+    marginal_cost_congestion_usd_per_mwh: { type: number }
+    marginal_cost_energy_usd_per_mwh: { type: number }
+    marginal_cost_ghg_usd_per_mwh: { type: number }
+    operator_time_stamp: { type: string }
+    source_url: { type: string }
+    verdict: { type: string }
+    confidence: { type: number }
+    reason: { type: string }
+    checked_at: { type: string }
