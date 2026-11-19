@@ -1,3 +1,5 @@
+import { inflateRawSync } from 'node:zlib';
+
 // Grid power price miner for Telegraph: GRID_POWER_PRICE_GENERAL
 // Reads public, keyless grid-operator data and answers in the Intent's fields:
 //   lmp_usd_per_mwh, node_or_zone, market, interval_start, currency
@@ -8,6 +10,9 @@
 //   NYISO day-ahead zonal LBMP, by day:  http://mis.nyiso.com/public/csv/damlbmp/YYYYMMDDdamlbmp_zone.csv
 //   MISO real-time 5-minute ex-post LMP, current day:
 //     https://public-api.misoenergy.org/api/MarketPricing/GetRealTimeFiveMinExPost/Rolling
+//   CAISO day-ahead hourly LMP (OASIS PRC_LMP, market DAM), any date, as a zipped CSV:
+//     http://oasis.caiso.com/oasisapi/SingleZip?queryname=PRC_LMP&market_run_id=DAM&...&resultformat=6
+//     CAISO stamps rows in GMT (INTERVALSTARTTIME_GMT), so no time-zone guessing is needed.
 //
 // Time stamps: NYISO real-time postings are stamped at the END of each 5-minute interval, in US Eastern
 // prevailing time; day-ahead rows are stamped at the start of the hour. MISO publishes in EST (UTC-5) all
@@ -17,6 +22,7 @@ const NYISO_LATEST = 'http://mis.nyiso.com/public/realtime/realtime_zone_lbmp.cs
 const NYISO_RT_DAY = d => `http://mis.nyiso.com/public/csv/realtime/${d}realtime_zone.csv`;
 const NYISO_DA_DAY = d => `http://mis.nyiso.com/public/csv/damlbmp/${d}damlbmp_zone.csv`;
 const MISO_ROLLING = 'https://public-api.misoenergy.org/api/MarketPricing/GetRealTimeFiveMinExPost/Rolling';
+const CAISO_OASIS = 'http://oasis.caiso.com/oasisapi/SingleZip';
 const UA = { 'user-agent': 'telegraph-provider/1.0 (+https://github.com/investor567768)' };
 
 // NYISO zones: official name -> words a buyer might use
@@ -38,7 +44,14 @@ const MISO_HUBS = {
   'MICHIGAN.HUB': ['MICHIGAN'], 'MINN.HUB': ['MINN', 'MINNESOTA'], 'MS.HUB': ['MS', 'MISSISSIPPI'],
   'TEXAS.HUB': ['TEXAS'], 'ARKANSAS.HUB': ['ARKANSAS'],
 };
-const OTHER_OPERATORS = ['ERCOT', 'CAISO', 'PJM', 'SPP', 'ISO-NE', 'ISONE', 'AESO', 'IESO'];
+// CAISO trading hubs. The day-ahead question in the Intent names no location, so a bare "CAISO" means NP15.
+const CAISO_HUBS = {
+  'TH_NP15_GEN-APND': ['NP15', 'NP 15', 'NORTH OF PATH 15', 'NORTHERN CALIFORNIA'],
+  'TH_SP15_GEN-APND': ['SP15', 'SP 15', 'SOUTH OF PATH 15', 'SOUTHERN CALIFORNIA'],
+  'TH_ZP26_GEN-APND': ['ZP26', 'ZP 26', 'PATH 26'],
+};
+const CAISO_DEFAULT = 'TH_NP15_GEN-APND';
+const OTHER_OPERATORS = ['ERCOT', 'PJM', 'SPP', 'ISO NE', 'ISONE', 'AESO', 'IESO'];
 
 class AnswerError extends Error { constructor(status, msg) { super(msg); this.status = status; } }
 
@@ -47,9 +60,20 @@ const norm = s => String(s || '').toUpperCase().replace(/[_\-]/g, ' ').replace(/
 // Work out which operator and which location the buyer means.
 function resolveLocation(raw) {
   const q = norm(raw);
-  if (!q) throw new AnswerError(400, 'node_or_zone is required, for example "N.Y.C.", "NYISO zone J" or "MISO INDIANA.HUB".');
+  if (!q) throw new AnswerError(400, 'node_or_zone is required, for example "CAISO NP15", "N.Y.C." or "MISO INDIANA.HUB".');
   const saysNyiso = /\bNYISO\b|\bNEW YORK\b|\bNY\b/.test(q);
   const saysMiso = /\bMISO\b/.test(q);
+  const saysCaiso = /\bCAISO\b|\bCALIFORNIA\b|\bCAL ISO\b/.test(q);
+
+  // CAISO: exact node names (TH_NP15_GEN-APND, DLAP_PGAE-APND, 0096WD_7_N001), hub nicknames, or bare "CAISO"
+  const rawUp = String(raw || '').toUpperCase().replace(/^CAISO[\s:]+/, '').trim();
+  if (/^[A-Z0-9_]+-APND$|^[A-Z0-9]+_\d+_N\d+$/.test(rawUp)) return { operator: 'CAISO', name: rawUp };
+  if (!saysNyiso && !saysMiso) {
+    for (const [hub, words] of Object.entries(CAISO_HUBS)) {
+      if (words.some(w => q.includes(w))) return { operator: 'CAISO', name: hub };
+    }
+    if (saysCaiso) return { operator: 'CAISO', name: CAISO_DEFAULT, defaulted: true };
+  }
   const stripped = q.replace(/\b(NYISO|MISO|ZONE|LOAD ZONE|HUB|TRADING HUB|NODE|PRICE|LMP|LBMP|REAL TIME|DAY AHEAD)\b/g, ' ')
     .replace(/\s+/g, ' ').trim();
 
@@ -74,8 +98,8 @@ function resolveLocation(raw) {
     }
   }
   const other = OTHER_OPERATORS.find(o => q.includes(o));
-  if (other) throw new AnswerError(404, `${other} is not covered. This miner answers NYISO zones and MISO nodes and hubs.`);
-  throw new AnswerError(404, `Could not match "${raw}" to a NYISO zone or MISO node. Examples: "N.Y.C.", "NYISO zone J", "MISO INDIANA.HUB".`);
+  if (other) throw new AnswerError(404, `${other} is not covered. This miner answers CAISO, NYISO and MISO.`);
+  throw new AnswerError(404, `Could not match "${raw}" to a CAISO, NYISO or MISO location. Examples: "CAISO NP15", "N.Y.C.", "NYISO zone J", "MISO INDIANA.HUB".`);
 }
 
 // --- time helpers -----------------------------------------------------------------------------
@@ -190,13 +214,79 @@ async function miso(node, when, market) {
   };
 }
 
+
+// --- CAISO: OASIS answers with a zip file holding one CSV (or one XML error) -------------------
+function unzipFirst(buf) {
+  // read the zip's central directory, then inflate the first entry
+  let eocd = -1;
+  for (let i = buf.length - 22; i >= Math.max(0, buf.length - 65557); i--) if (buf.readUInt32LE(i) === 0x06054b50) { eocd = i; break; }
+  if (eocd < 0) throw new AnswerError(502, 'CAISO returned something that is not a zip file.');
+  const cd = buf.readUInt32LE(eocd + 16);
+  if (buf.readUInt32LE(cd) !== 0x02014b50) throw new AnswerError(502, 'CAISO zip file is damaged.');
+  const method = buf.readUInt16LE(cd + 10), size = buf.readUInt32LE(cd + 20);
+  const nameLen = buf.readUInt16LE(cd + 28), local = buf.readUInt32LE(cd + 42);
+  const name = buf.slice(cd + 46, cd + 46 + nameLen).toString('utf8');
+  const start = local + 30 + buf.readUInt16LE(local + 26) + buf.readUInt16LE(local + 28);
+  const data = buf.slice(start, start + size);
+  const body = method === 0 ? data : inflateRawSync(data);
+  return { name, text: body.toString('utf8') };
+}
+const caisoTime = d => d.toISOString().slice(0, 16).replace(/-/g, '') + '-0000'; // 20260913T14:00-0000
+async function getZip(url, ttlMs) {
+  const hit = cache.get(url);
+  if (hit && Date.now() - hit.at < ttlMs) return hit.body;
+  let r;
+  try { r = await fetch(url, { headers: UA }); }
+  catch (e) { throw new AnswerError(502, 'CAISO OASIS could not be reached. Try again shortly.'); }
+  if (r.status === 429) throw new AnswerError(503, 'CAISO OASIS is limiting requests. Try again in a few seconds.');
+  if (!r.ok) throw new AnswerError(502, `CAISO OASIS answered HTTP ${r.status}.`);
+  const out = unzipFirst(Buffer.from(await r.arrayBuffer()));
+  if (/\.xml$/i.test(out.name) || /^\s*</.test(out.text)) {
+    const desc = (out.text.match(/<(?:\w+:)?ERR_DESC>([^<]*)</) || [])[1] || 'unknown error';
+    const code = (out.text.match(/<(?:\w+:)?ERR_CODE>([^<]*)</) || [])[1] || '';
+    if (code === '1015' || /too many/i.test(desc)) throw new AnswerError(503, 'CAISO OASIS is limiting requests. Try again in a few seconds.');
+    throw new AnswerError(404, `CAISO OASIS returned no price: ${desc.trim()}`);
+  }
+  cache.set(url, { at: Date.now(), body: out.text });
+  return out.text;
+}
+async function caiso(node, when, market) {
+  if (market === 'real_time') throw new AnswerError(404, 'CAISO real-time prices are not covered yet; this miner answers CAISO day-ahead prices.');
+  const t = when || new Date();
+  const hour = new Date(Math.floor(t.getTime() / 3600000) * 3600000);
+  const end = new Date(hour.getTime() + 3600000);
+  const url = `${CAISO_OASIS}?queryname=PRC_LMP&market_run_id=DAM&startdatetime=${caisoTime(hour)}&enddatetime=${caisoTime(end)}&version=1&node=${encodeURIComponent(node)}&resultformat=6`;
+  const past = end.getTime() < Date.now() - 2 * 86400000;
+  const rows = parseCsv(await getZip(url, past ? 24 * 3600000 : 15 * 60000));
+  const head = rows[0].map(h => h.trim().toUpperCase());
+  const iS = head.indexOf('INTERVALSTARTTIME_GMT'), iE = head.indexOf('INTERVALENDTIME_GMT'), iN = head.indexOf('NODE');
+  const iT = head.indexOf('LMP_TYPE'), iV = ['MW', 'PRC', 'VALUE'].map(c => head.indexOf(c)).find(i => i >= 0);
+  const iDt = head.indexOf('OPR_DT'), iHr = head.indexOf('OPR_HR');
+  if (iS < 0 || iN < 0 || iT < 0 || iV === undefined) throw new AnswerError(502, 'CAISO file layout changed; the answer cannot be read.');
+  const mine = rows.slice(1).filter(r => r[iN] === node && new Date(r[iS]).getTime() === hour.getTime());
+  const pick = type => { const r = mine.find(x => x[iT] === type); return r ? +r[iV] : null; };
+  const lmp = pick('LMP');
+  if (lmp === null) throw new AnswerError(404, `CAISO published no day-ahead price for ${node} for the hour starting ${iso(hour)}.`);
+  return {
+    lmp, node_or_zone: node, operator: 'CAISO', market: 'CAISO day-ahead hourly LMP (DAM)',
+    start: hour, minutes: 60,
+    published: iDt >= 0 ? `${mine[0][iDt]} hour ending ${mine[0][iHr]} Pacific (operating day, OPR_HR)` : mine[0][iS],
+    components: { losses: pick('MCL'), congestion: pick('MCC'), energy: pick('MCE'), ghg: pick('MGHG') }, source_url: url,
+  };
+}
+
 // --- answer -------------------------------------------------------------------------------------
 async function answer(params) {
   const loc = resolveLocation(params.node_or_zone || params.node || params.zone || params.query);
   const when = parseRequestedTime(params.interval_start);
-  const raw = norm(params.market || params.query || '');
-  const market = /DAY AHEAD|DAM\b|DA\b/.test(raw) ? 'day_ahead' : 'real_time';
-  const p = loc.operator === 'NYISO' ? await nyiso(loc.name, when, market) : await miso(loc.name, when, market);
+  const raw = norm([params.market, params.query, params.node_or_zone].filter(Boolean).join(' '));
+  const saysDayAhead = /DAY AHEAD|\bDAM\b|\bDA\b/.test(raw);
+  const saysRealTime = /REAL TIME|\bRTM\b|\bRT\b|5 MINUTE/.test(raw);
+  // NYISO and MISO default to real-time; CAISO defaults to day-ahead, the market the Intent's question asks about
+  const market = saysDayAhead ? 'day_ahead' : saysRealTime ? 'real_time' : (loc.operator === 'CAISO' ? 'day_ahead' : 'real_time');
+  const p = loc.operator === 'NYISO' ? await nyiso(loc.name, when, market)
+    : loc.operator === 'CAISO' ? await caiso(loc.name, when, market)
+    : await miso(loc.name, when, market);
   if (!isFinite(p.lmp)) throw new AnswerError(502, 'The operator returned a price that is not a number.');
   return {
     lmp_usd_per_mwh: p.lmp,
@@ -208,11 +298,14 @@ async function answer(params) {
     operator: p.operator,
     marginal_cost_losses_usd_per_mwh: p.components.losses,
     marginal_cost_congestion_usd_per_mwh: p.components.congestion,
+    ...(p.components.energy != null ? { marginal_cost_energy_usd_per_mwh: p.components.energy } : {}),
+    ...(p.components.ghg != null ? { marginal_cost_ghg_usd_per_mwh: p.components.ghg } : {}),
     operator_time_stamp: p.published,
     source_url: p.source_url,
     verdict: 'found',
     confidence: 1,
-    reason: `${p.operator} published ${p.lmp} USD/MWh for ${p.node_or_zone} for the interval starting ${iso(p.start)}.`,
+    reason: `${p.operator} published ${p.lmp} USD/MWh for ${p.node_or_zone} for the interval starting ${iso(p.start)}.`
+      + (loc.defaulted ? ' No CAISO location was named, so the NP15 trading hub (TH_NP15_GEN-APND) was used.' : ''),
     checked_at: iso(new Date()),
   };
 }
@@ -232,4 +325,4 @@ export default async function handler(req, res) {
   }
 }
 
-export { answer, resolveLocation, parseNyisoStamp, parseMisoStamp, easternToUtc, AnswerError, cache };
+export { answer, resolveLocation, unzipFirst, parseNyisoStamp, parseMisoStamp, easternToUtc, AnswerError, cache };
