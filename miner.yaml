@@ -68,15 +68,9 @@ endpoints:
             type: string
             intents: ["*"]
             description: >-
-              Which market's price. Defaults to day_ahead for CAISO and real_time for
-              NYISO and MISO.
-            accepted_fields:
-              - value: real_time
-                intents: ["*"]
-                description: Real-time 5-minute price (NYISO and MISO; not CAISO).
-              - value: day_ahead
-                intents: ["*"]
-                description: Day-ahead hourly price (CAISO and NYISO; not MISO).
+              Which market's price, one of two values: real_time (5-minute price; NYISO
+              and MISO, not CAISO) or day_ahead (hourly price; CAISO and NYISO, not MISO).
+              Defaults to day_ahead for CAISO and real_time for NYISO and MISO.
 
 intent_mapping:
   GRID_POWER_PRICE_GENERAL:
