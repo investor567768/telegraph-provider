@@ -1,0 +1,24 @@
+# Checks the live miner against the grid operators' own files (NYISO, MISO, CAISO).
+# Runs every day and on demand (Actions tab -> "Grid price accuracy" -> Run workflow).
+# Results: the run's Summary page shows every check; the CSV is attached as an artifact.
+name: Grid price accuracy
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '43 16 * * *'   # daily at 16:43 UTC
+
+jobs:
+  accuracy:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compare the live miner with NYISO, MISO and CAISO files
+        shell: powershell
+        run: powershell -ExecutionPolicy Bypass -File test\accuracy.ps1
+      - name: Keep the results file
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: accuracy-results
+          path: accuracy-*.csv
