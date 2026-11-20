@@ -74,3 +74,12 @@ test('CAISO real-time is refused honestly', async () => {
   mock(zip('PRC_LMP.csv', CSV));
   await assert.rejects(answer({ node_or_zone: 'CAISO NP15', market: 'real_time', interval_start: '2026-09-13T14:00:00Z' }), /real-time prices are not covered/);
 });
+
+test('ERCOT names are refused, never mapped to NYISO WEST/NORTH (bug found 20 Nov)', () => {
+  for (const x of ['HB_WEST', 'LZ_WEST', 'HB_NORTH', 'HB_HOUSTON', 'ERCOT Houston hub', 'west texas'])
+    assert.throws(() => resolveLocation(x), /ERCOT \(Texas\) is not covered/);
+  assert.throws(() => resolveLocation('WEST'), /Could not match/);          // ambiguous without NYISO
+  assert.equal(resolveLocation('NYISO WEST').name, 'WEST');
+  assert.equal(resolveLocation('NYISO zone A').name, 'WEST');
+  assert.equal(resolveLocation('MISO TEXAS.HUB').name, 'TEXAS.HUB');    // MISO's Texas hub still works
+});

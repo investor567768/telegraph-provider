@@ -51,7 +51,7 @@ const CAISO_HUBS = {
   'TH_ZP26_GEN-APND': ['ZP26', 'ZP 26', 'PATH 26'],
 };
 const CAISO_DEFAULT = 'TH_NP15_GEN-APND';
-const OTHER_OPERATORS = ['ERCOT', 'PJM', 'SPP', 'ISO NE', 'ISONE', 'AESO', 'IESO'];
+const OTHER_OPERATORS = ['PJM', 'SPP', 'ISO NE', 'ISONE', 'AESO', 'IESO'];
 
 class AnswerError extends Error { constructor(status, msg) { super(msg); this.status = status; } }
 
@@ -77,9 +77,15 @@ function resolveLocation(raw) {
   const stripped = q.replace(/\b(NYISO|MISO|ZONE|LOAD ZONE|HUB|TRADING HUB|NODE|PRICE|LMP|LBMP|REAL TIME|DAY AHEAD)\b/g, ' ')
     .replace(/\s+/g, ' ').trim();
 
+  // ERCOT (Texas) names: hubs HB_*, load zones LZ_*, DC ties DC_*, or "ERCOT"/"Texas" without MISO.
+  // Refuse them so "HB_WEST" can never be mistaken for NYISO zone WEST.
+  if (/\bERCOT\b/.test(q) || /(^|\s)(HB|LZ|DC)\s[A-Z]/.test(q) || (/\bTEXAS\b/.test(q) && !saysMiso && !/TEXAS\.?\s?HUB/.test(q)))
+    throw new AnswerError(404, `ERCOT (Texas) is not covered: "${raw}" looks like an ERCOT location. This miner answers CAISO, NYISO and MISO only.`);
+
   // NYISO official zone names written exactly (N.Y.C. contains dots, so check before MISO node names)
   const official = Object.keys(NYISO_ZONES).find(z => q.replace(/^NYISO\s+/, '') === z);
-  if (official && !saysMiso) return { operator: 'NYISO', name: official };
+  // WEST and NORTH are also zone names in other grids (ERCOT LZ_WEST, HB_NORTH): accept them only with "NYISO"
+  if (official && !saysMiso && (saysNyiso || !['WEST', 'NORTH'].includes(official))) return { operator: 'NYISO', name: official };
 
   // MISO node given exactly, e.g. WEC.OAKCREKC5 or INDIANA.HUB
   const exactNode = q.replace(/^MISO\s+/, '').replace(/\s+/g, '');
@@ -87,7 +93,12 @@ function resolveLocation(raw) {
 
   if (!saysMiso) {
     for (const [zone, words] of Object.entries(NYISO_ZONES)) {
-      const hit = words.some(w => w.length === 1 ? (saysNyiso && stripped === w) : (stripped === w || stripped.includes(w)));
+      // generic words (WEST, NORTH) exist in other grids too, so they need "NYISO" in the question
+      const generic = new Set(['WEST', 'NORTH']);
+      const hit = words.some(w => {
+        if (w.length === 1 || generic.has(w)) return saysNyiso && stripped === w;
+        return stripped === w || new RegExp(`(^|\\s)${w.replace(/[.]/g, '\\.')}(\\s|$)`).test(stripped);
+      });
       if (hit) return { operator: 'NYISO', name: zone };
     }
   }

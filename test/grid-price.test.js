@@ -38,7 +38,7 @@ test('names map to the right operator and zone', () => {
   assert.deepEqual(resolveLocation('MISO Indiana Hub'), { operator: 'MISO', name: 'INDIANA.HUB' });
   assert.deepEqual(resolveLocation('INDIANA.HUB'), { operator: 'MISO', name: 'INDIANA.HUB' });
   assert.deepEqual(resolveLocation('wec.oakcrekc5'), { operator: 'MISO', name: 'WEC.OAKCREKC5' });
-  assert.throws(() => resolveLocation('ERCOT Houston hub'), /ERCOT is not covered/);
+  assert.throws(() => resolveLocation('ERCOT Houston hub'), /ERCOT \(Texas\) is not covered/);
   assert.throws(() => resolveLocation('Mars'), /Could not match/);
   assert.throws(() => resolveLocation(''), /required/);
 });

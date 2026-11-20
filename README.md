@@ -90,6 +90,7 @@ Errors are explicit, never a guessed price: unknown location (404), operator not
 ## Honest limits
 
 - **Not covered yet:** ERCOT, PJM, ISO-NE, SPP, CAISO real-time, MISO day-ahead. Each returns a clear 404.
+- **Bug fixed on 20 Nov 2026:** ERCOT names such as `HB_WEST`, `LZ_WEST` and `HB_NORTH` were matched to NYISO zones WEST and NORTH, so an ERCOT question could get a New York price. Reported publicly by the Ballast team (Anjoman rejected the answers). ERCOT names are now refused with a 404, and the generic words `WEST` and `NORTH` only match NYISO when the question says NYISO. A regression test covers it.
 - **MISO** history is limited to the current operating day, because the public feed is a rolling file.
 - **Default location:** the Intent's scored question names no location, so a bare "CAISO" is answered for NP15, the most-used CAISO hub. The answer says so. If a truth source uses a different node, a bare "CAISO" question would be scored against it; questions that name a node are unaffected.
 - **Scoring:** on 19 Nov 2026 no evaluator was yet ranked for this Intent, so every miner's leaderboard score was 0.000.
