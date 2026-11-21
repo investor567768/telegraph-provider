@@ -100,3 +100,6 @@ Errors are explicit, never a guessed price: unknown location (404), operator not
 
 - `npm test`: 12 unit tests (location matching, daylight saving, NYISO, MISO, CAISO zip parsing and error cases).
 - `test/accuracy.ps1`: the live accuracy check, run daily by GitHub Actions.
+
+Note (21 Nov 2026): `api/truth/cve.js` is part of my Evaluators entry, not this miner. It was first deployed here by mistake and now lives in [telegraph-evaluator](https://github.com/investor567768/telegraph-evaluator). This copy stays online only because an earlier truth-source submission still points to it.
+
