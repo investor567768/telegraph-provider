@@ -99,7 +99,8 @@ Errors are explicit, never a guessed price: unknown location (404), operator not
 | Daily accuracy runs (public logs and Summary tables) | [Actions → Grid price accuracy](https://github.com/investor567768/telegraph-provider/actions/workflows/accuracy.yml) |
 | First run, 24 of 24 | [run 44534807922](https://github.com/investor567768/telegraph-provider/actions/runs/44534807922) |
 | Accuracy script (independent of the miner's code) | [test/accuracy.ps1](test/accuracy.ps1) |
-| Unit tests (12, including the real CAISO file of 13 Sep 2026) | [test/](test/) · run `npm test` |
+| Unit tests (24, including the real CAISO file of 13 Sep 2026 and a real zip holding the clock-change hour) | [test/](test/) · run `npm test` |
+| Independent test, 26 Nov 2026 | Jennycruzy (Discord, builder of MONEY OWED) checked 12 live answers against files she downloaded from the operators herself: 10 matched, 2 failed. Both fixed in [e9b7551](https://github.com/investor567768/telegraph-provider/commit/e9b7551). [Her report](https://github.com/investor567768/telegraph-provider/issues/1) |
 | Registered YAML | [miner.yaml](miner.yaml) |
 | Paid earnings, 10 periods, $0.1197 USDC (26 Nov 2026) | [miner-6129-earnings.jpg](miner-6129-earnings.jpg) |
 
@@ -107,6 +108,7 @@ Errors are explicit, never a guessed price: unknown location (404), operator not
 
 - **Not covered yet:** ERCOT, PJM, ISO-NE, SPP, CAISO real-time, MISO day-ahead. Each returns a clear 404.
 - **Bug fixed on 20 Nov 2026:** ERCOT names such as `HB_WEST`, `LZ_WEST` and `HB_NORTH` were matched to NYISO zones WEST and NORTH, so an ERCOT question could get a New York price. Reported publicly by the Ballast team (Anjoman rejected the answers). ERCOT names are now refused with a 404, and the generic words `WEST` and `NORTH` only match NYISO when the question says NYISO. A regression test covers it.
+- **Bugs fixed on 26 Nov 2026,** found by independent tester Jennycruzy: (1) NYISO answers for 1 Nov 2026, the clock-change day, came back as "not published" because the daily file had rolled into NYISO's monthly archive and the 01:00 hour repeats. The miner now reads the monthly zip and handles the repeated hour (05:00Z gives 33.33, 06:00Z gives 33.46). (2) A CAISO question about a future date gave a vague error; it now says that no price exists yet. Tests cover both.
 - **MISO** history is limited to the current operating day, because the public feed is a rolling file.
 - **Default location:** the Intent's scored question names no location, so a bare "CAISO" is answered for NP15, the most-used CAISO hub. The answer says so. If a truth source uses a different node, a bare "CAISO" question would be scored against it; questions that name a node are unaffected.
 - **Scoring:** on 19 Nov 2026 no evaluator was yet ranked for this Intent, so every miner's leaderboard score was 0.000.
