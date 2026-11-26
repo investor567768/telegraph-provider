@@ -21,6 +21,9 @@ import { inflateRawSync } from 'node:zlib';
 const NYISO_LATEST = 'http://mis.nyiso.com/public/realtime/realtime_zone_lbmp.csv';
 const NYISO_RT_DAY = d => `http://mis.nyiso.com/public/csv/realtime/${d}realtime_zone.csv`;
 const NYISO_DA_DAY = d => `http://mis.nyiso.com/public/csv/damlbmp/${d}damlbmp_zone.csv`;
+// Older days are moved out of the daily files into one zip per month, named by the first day of the month
+const NYISO_RT_MONTH = d => `http://mis.nyiso.com/public/csv/realtime/${d.slice(0, 6)}01realtime_zone_csv.zip`;
+const NYISO_DA_MONTH = d => `http://mis.nyiso.com/public/csv/damlbmp/${d.slice(0, 6)}01damlbmp_zone_csv.zip`;
 const MISO_ROLLING = 'https://public-api.misoenergy.org/api/MarketPricing/GetRealTimeFiveMinExPost/Rolling';
 const CAISO_OASIS = 'http://oasis.caiso.com/oasisapi/SingleZip';
 const UA = { 'user-agent': 'telegraph-provider/1.0 (+https://github.com/investor567768)' };
@@ -176,20 +179,60 @@ function parseCsv(text) {
   return rows;
 }
 
+// NYISO keeps recent days as daily CSVs and moves older days into one zip per month.
+// Try the daily file first; on 404, read that day's CSV out of the monthly zip.
+async function nyisoDay(dayAhead, dateKey) {
+  const daily = dayAhead ? NYISO_DA_DAY(dateKey) : NYISO_RT_DAY(dateKey);
+  try { return { text: await getText(daily, 10 * 60000), url: daily }; }
+  catch (e) { if (!(e instanceof AnswerError) || e.status !== 404) throw e; }
+  const zipUrl = dayAhead ? NYISO_DA_MONTH(dateKey) : NYISO_RT_MONTH(dateKey);
+  const inner = dayAhead ? `${dateKey}damlbmp_zone.csv` : `${dateKey}realtime_zone.csv`;
+  const hit = cache.get(zipUrl + '#' + inner);
+  if (hit && Date.now() - hit.at < 24 * 3600000) return { text: hit.body, url: zipUrl };
+  let r;
+  try { r = await fetch(zipUrl, { headers: UA }); }
+  catch (e) { throw new AnswerError(502, 'The grid operator could not be reached. Try again shortly.'); }
+  if (r.status === 404) throw new AnswerError(404, `NYISO has published no file for ${dateKey}, neither the daily file nor the monthly archive.`);
+  if (!r.ok) throw new AnswerError(502, `The grid operator answered HTTP ${r.status}.`);
+  const out = unzipFirst(Buffer.from(await r.arrayBuffer()), inner);
+  if (!out) throw new AnswerError(404, `NYISO's monthly archive has no file for ${dateKey}.`);
+  cache.set(zipUrl + '#' + inner, { at: Date.now(), body: out.text });
+  return { text: out.text, url: `${zipUrl} (${inner} inside)` };
+}
+
+// On the autumn change from daylight time, the Eastern clock repeats 01:00-01:59, so the same
+// stamp appears twice. In file order, the first one is daylight time (EDT) and the second standard (EST).
+function nyisoStampsInOrder(stamps) {
+  const seen = new Set();
+  return stamps.map(s => {
+    const t = parseNyisoStamp(s); // a repeated wall-clock time is read as the later (EST) instant
+    const earlier = new Date(t.getTime() - 3600000);
+    const repeats = easternWall(earlier) === easternWall(t);
+    if (!repeats) return t;
+    if (seen.has(s)) return t;
+    seen.add(s);
+    return earlier;
+  });
+}
+const easternWall = d => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hourCycle: 'h23',
+  year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).format(d);
+
 // --- operators ----------------------------------------------------------------------------------
 async function nyiso(zone, when, market) {
   const dayAhead = market === 'day_ahead';
   const intervalMin = dayAhead ? 60 : 5;
-  let url;
-  if (dayAhead) url = NYISO_DA_DAY(easternDateKey(when || new Date()));
-  else url = when ? NYISO_RT_DAY(easternDateKey(when)) : NYISO_LATEST;
-  const rows = parseCsv(await getText(url, when ? 10 * 60000 : 60000));
+  let url, text;
+  if (!dayAhead && !when) { url = NYISO_LATEST; text = await getText(url, 60000); }
+  else ({ text, url } = await nyisoDay(dayAhead, easternDateKey(when || new Date())));
+  const rows = parseCsv(text);
   const head = rows[0].map(h => h.trim());
   const iT = head.indexOf('Time Stamp'), iN = head.indexOf('Name'), iL = head.findIndex(h => h.startsWith('LBMP'));
   const iLoss = head.findIndex(h => h.startsWith('Marginal Cost Losses')), iCong = head.findIndex(h => h.startsWith('Marginal Cost Congestion'));
   if (iT < 0 || iN < 0 || iL < 0) throw new AnswerError(502, 'NYISO file layout changed; the answer cannot be read.');
-  const mine = rows.slice(1).filter(r => r[iN] === zone).map(r => {
-    const stamp = parseNyisoStamp(r[iT]);
+  const zoneRows = rows.slice(1).filter(r => r[iN] === zone);
+  const stamps = nyisoStampsInOrder(zoneRows.map(r => r[iT]));
+  const mine = zoneRows.map((r, k) => {
+    const stamp = stamps[k];
     const start = dayAhead ? stamp : new Date(stamp.getTime() - 5 * 60000); // real-time stamps mark the interval end
     return { start, row: r };
   });
@@ -227,16 +270,23 @@ async function miso(node, when, market) {
 
 
 // --- CAISO: OASIS answers with a zip file holding one CSV (or one XML error) -------------------
-function unzipFirst(buf) {
-  // read the zip's central directory, then inflate the first entry
+function unzipFirst(buf, wanted) {
+  // read the zip's central directory, then inflate the first entry (or the entry named `wanted`)
   let eocd = -1;
   for (let i = buf.length - 22; i >= Math.max(0, buf.length - 65557); i--) if (buf.readUInt32LE(i) === 0x06054b50) { eocd = i; break; }
   if (eocd < 0) throw new AnswerError(502, 'CAISO returned something that is not a zip file.');
-  const cd = buf.readUInt32LE(eocd + 16);
-  if (buf.readUInt32LE(cd) !== 0x02014b50) throw new AnswerError(502, 'CAISO zip file is damaged.');
-  const method = buf.readUInt16LE(cd + 10), size = buf.readUInt32LE(cd + 20);
-  const nameLen = buf.readUInt16LE(cd + 28), local = buf.readUInt32LE(cd + 42);
-  const name = buf.slice(cd + 46, cd + 46 + nameLen).toString('utf8');
+  const count = buf.readUInt16LE(eocd + 10);
+  let cd = buf.readUInt32LE(eocd + 16), method, size, local, name;
+  for (let k = 0; k < count; k++) {
+    if (buf.readUInt32LE(cd) !== 0x02014b50) throw new AnswerError(502, 'The zip file is damaged.');
+    method = buf.readUInt16LE(cd + 10); size = buf.readUInt32LE(cd + 20);
+    const nameLen = buf.readUInt16LE(cd + 28), extra = buf.readUInt16LE(cd + 30), comment = buf.readUInt16LE(cd + 32);
+    local = buf.readUInt32LE(cd + 42);
+    name = buf.slice(cd + 46, cd + 46 + nameLen).toString('utf8');
+    if (!wanted || name === wanted) break;
+    name = null; cd += 46 + nameLen + extra + comment;
+  }
+  if (!name) return null;
   const start = local + 30 + buf.readUInt16LE(local + 26) + buf.readUInt16LE(local + 28);
   const data = buf.slice(start, start + size);
   const body = method === 0 ? data : inflateRawSync(data);
@@ -290,6 +340,10 @@ async function caiso(node, when, market) {
 async function answer(params) {
   const loc = resolveLocation(params.node_or_zone || params.node || params.zone || params.query);
   const when = parseRequestedTime(params.interval_start);
+  // Day-ahead prices are published about one day ahead; nothing exists further out, so say so
+  // before calling an operator (CAISO otherwise answers with a misleading rate-limit or empty result).
+  if (when && when.getTime() > Date.now() + 2 * 86400000)
+    throw new AnswerError(404, `${iso(when)} is in the future. Grid operators publish day-ahead prices about one day ahead, so no price exists yet for that interval.`);
   const raw = norm([params.market, params.query, params.node_or_zone].filter(Boolean).join(' '));
   const saysDayAhead = /DAY AHEAD|\bDAM\b|\bDA\b/.test(raw);
   const saysRealTime = /REAL TIME|\bRTM\b|\bRT\b|5 MINUTE/.test(raw);
@@ -336,4 +390,4 @@ export default async function handler(req, res) {
   }
 }
 
-export { answer, resolveLocation, unzipFirst, parseNyisoStamp, parseMisoStamp, easternToUtc, AnswerError, cache };
+export { answer, resolveLocation, unzipFirst, parseNyisoStamp, nyisoStampsInOrder, parseMisoStamp, easternToUtc, AnswerError, cache };

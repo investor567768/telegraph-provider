@@ -67,7 +67,7 @@ test('a time inside the hour selects that hour', async () => {
 
 test('OASIS XML error becomes a clear 404', async () => {
   mock(zip('error.xml', '<m:OASISReport><m:ERR_CODE>1000</m:ERR_CODE><m:ERR_DESC>No data returned for the specified selection</m:ERR_DESC></m:OASISReport>'));
-  await assert.rejects(answer({ node_or_zone: 'CAISO', interval_start: '2030-01-01T00:00:00Z' }), /No data returned/);
+  await assert.rejects(answer({ node_or_zone: 'CAISO', interval_start: '2020-01-01T00:00:00Z' }), /No data returned/);
 });
 
 test('CAISO real-time is refused honestly', async () => {
