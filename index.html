@@ -1,94 +1,180 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Telegraph Provider: US grid power prices (CAISO, NYISO, MISO)</title>
 <meta name="description" content="A Telegraph miner that answers wholesale electricity prices (LMP) for CAISO, NYISO and MISO from each grid operator's own public data.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  :root { --bg:#0e1116; --card:#161b22; --line:#2a313c; --text:#e6edf3; --muted:#9aa4b2; --accent:#f0a830; --bad:#f05d5e; }
+  :root, [data-theme="dark"] {
+    --bg:#0e1116; --card:#161b22; --card-2:#1d242d; --line:#2a313c; --line-2:#3a4350;
+    --text:#e6edf3; --muted:#9aa4b2; --accent:#f0a830; --accent-ink:#1a1200; --bad:#f05d5e;
+  }
+  [data-theme="light"] {
+    --bg:#faf7f2; --card:#ffffff; --card-2:#f3eee6; --line:#e5ddd0; --line-2:#d3c8b6;
+    --text:#1b1710; --muted:#645c4e; --accent:#a8620a; --accent-ink:#ffffff; --bad:#c93434;
+  }
   * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--text); font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
-  main { max-width:960px; margin:0 auto; padding:40px 20px 64px; }
-  h1 { font-size:30px; margin:0 0 8px; letter-spacing:-.01em; }
-  h2 { font-size:20px; margin:40px 0 12px; }
-  p { margin:0 0 12px; }
-  .muted { color:var(--muted); }
+  body { margin:0; background:var(--bg); color:var(--text); font:400 16.5px/1.6 'Geist',system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; -webkit-font-smoothing:antialiased; transition:background .25s,color .25s; }
   a { color:var(--accent); }
-  .stats { display:flex; gap:12px; flex-wrap:wrap; margin:24px 0 8px; }
-  .stat { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 18px; min-width:150px; }
-  .stat b { display:block; font-size:24px; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px; }
+  :focus-visible { outline:3px solid var(--accent); outline-offset:3px; border-radius:8px; }
+  .wrap { max-width:960px; margin:0 auto; padding:0 20px; }
+  h1 { font-size:clamp(1.9rem,5.4vw,2.9rem); line-height:1.08; letter-spacing:-.03em; margin:0 0 14px; font-weight:800; max-width:20ch; }
+  h2 { font-size:1.45rem; letter-spacing:-.02em; margin:0 0 12px; font-weight:700; }
+  p { margin:0 0 12px; max-width:64ch; }
+  .muted { color:var(--muted); }
+  code, .mono { font-family:'Geist Mono',ui-monospace,Consolas,monospace; }
+
+  .bar { position:sticky; top:0; z-index:10; backdrop-filter:blur(12px); background:color-mix(in srgb,var(--bg) 82%,transparent); border-bottom:1px solid var(--line); }
+  .bar .in { display:flex; align-items:center; justify-content:space-between; height:58px; }
+  .brand { font-weight:700; letter-spacing:-.02em; display:flex; gap:10px; align-items:center; }
+  .logo { width:28px; height:28px; border-radius:8px; background:var(--accent); color:var(--accent-ink); display:grid; place-items:center; font-weight:800; }
+  .theme { appearance:none; border:1px solid var(--line-2); background:var(--card); color:var(--text); border-radius:10px; padding:8px 12px; font:500 .9rem 'Geist',sans-serif; cursor:pointer; display:flex; gap:8px; align-items:center; }
+  .theme:hover { border-color:var(--accent); }
+
+  header.hero { padding:44px 0 8px; }
+  .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:26px 0 0; }
+  @media (max-width:640px){ .stats { grid-template-columns:1fr; } }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 16px; }
+  .stat b { display:block; font-size:1.25rem; letter-spacing:-.01em; }
+  .stat span { font-size:.9rem; }
+
+  section.block { padding:44px 0 4px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:20px; }
   form { display:flex; gap:8px; flex-wrap:wrap; margin:14px 0 10px; }
-  input, select { flex:1; min-width:140px; background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:9px 10px; font:inherit; }
+  input, select { flex:1; min-width:140px; background:var(--bg); color:var(--text); border:1px solid var(--line-2); border-radius:10px; padding:11px 12px; font:inherit; }
   select { flex:0 0 auto; }
-  button { background:var(--accent); color:#1a1200; border:0; border-radius:8px; padding:9px 14px; font-weight:600; cursor:pointer; }
-  button:disabled { opacity:.6; cursor:wait; }
+  button.go { background:var(--accent); color:var(--accent-ink); border:0; border-radius:10px; padding:11px 18px; font:600 1rem 'Geist',sans-serif; cursor:pointer; }
+  button.go:disabled { opacity:.6; cursor:wait; }
   .chips { display:flex; gap:6px; flex-wrap:wrap; }
-  .chip { background:transparent; color:var(--muted); border:1px solid var(--line); border-radius:999px; padding:5px 10px; font-size:13px; font-weight:500; }
-  .out { background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:12px; min-height:64px; font-size:14px; margin-top:10px; }
-  .out .big { font-size:22px; font-weight:700; }
+  .chip { background:transparent; color:var(--muted); border:1px solid var(--line-2); border-radius:999px; padding:6px 12px; font:500 .88rem 'Geist',sans-serif; cursor:pointer; }
+  .chip:hover { color:var(--text); border-color:var(--accent); }
+  .out { background:var(--card-2); border:1px solid var(--line); border-radius:12px; padding:14px; min-height:60px; font-size:.95rem; margin-top:10px; overflow-wrap:anywhere; }
+  .out .big { font-size:1.5rem; font-weight:700; letter-spacing:-.02em; }
   .out .err { color:var(--bad); }
-  .out pre { margin:8px 0 0; white-space:pre-wrap; word-break:break-word; font:12px/1.45 ui-monospace,Consolas,monospace; color:var(--muted); }
-  table { width:100%; border-collapse:collapse; font-size:15px; }
-  th, td { text-align:left; padding:10px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
-  th { color:var(--muted); font-weight:600; font-size:13px; }
-  code { font:13px ui-monospace,Consolas,monospace; }
-  footer { margin-top:48px; color:var(--muted); font-size:14px; }
+  .out details { margin-top:10px; }
+  .out summary { cursor:pointer; color:var(--muted); font-size:.85rem; }
+  .out pre { margin:8px 0 0; white-space:pre-wrap; word-break:break-word; font:400 .76rem/1.5 'Geist Mono',monospace; color:var(--muted); }
+
+  table { width:100%; border-collapse:collapse; font-size:.95rem; }
+  th, td { text-align:left; padding:11px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-weight:500; font-size:.85rem; }
+  @media (max-width:640px){
+    table, tbody, tr, td { display:block; }
+    thead { display:none; }
+    tr { border-bottom:1px solid var(--line); padding:10px 0; }
+    td { border:0; padding:2px 0; }
+    td:first-child { font-weight:600; }
+    td[data-l]::before { content:attr(data-l) ": "; color:var(--muted); font-weight:400; }
+  }
+
+  footer { margin-top:52px; padding:32px 0 56px; border-top:1px solid var(--line); color:var(--muted); font-size:.92rem; }
+  .foot-links { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px; }
+  .foot-links a { display:inline-flex; gap:8px; align-items:center; padding:10px 14px; border:1px solid var(--line-2); border-radius:12px; color:var(--text); text-decoration:none; font-weight:600; font-size:.95rem; background:var(--card); }
+  .foot-links a:hover { border-color:var(--accent); }
+  .foot-links a span { color:var(--accent); }
+  .ep { display:flex; gap:8px; align-items:stretch; margin:0 0 16px; max-width:760px; }
+  .ep code { flex:1; min-width:0; overflow-x:auto; white-space:nowrap; background:var(--card-2); border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:.8rem; color:var(--text); }
+  .copy { flex:none; background:var(--card-2); color:var(--text); border:1px solid var(--line-2); border-radius:10px; padding:0 14px; font:600 .88rem 'Geist',sans-serif; cursor:pointer; }
+  .copy:hover { border-color:var(--accent); }
 </style>
 </head>
 <body>
-<main>
-  <h1>Telegraph Provider: US grid power prices</h1>
-  <p class="muted">A Telegraph miner that answers wholesale electricity prices (LMP, in USD per MWh) for California, New York and the Midwest, read from each grid operator's own public data, with the exact interval and a link to the operator's file.</p>
-  <p class="muted">Built by Chrysolite for Telegraph Hackathon Season II, Miners track. Code: <a href="https://github.com/investor567768/telegraph-provider">github.com/investor567768/telegraph-provider</a></p>
+<div class="bar"><div class="wrap in">
+  <div class="brand"><span class="logo">P</span><b>Telegraph Provider</b></div>
+  <button class="theme" id="theme" type="button" aria-label="Switch between dark and light mode"><span id="themeIcon">☀</span><span id="themeText">Light</span></button>
+</div></div>
 
-  <div class="stats">
-    <div class="stat"><b>3 operators</b><span class="muted">CAISO, NYISO, MISO</span></div>
-    <div class="stat"><b>Live miner #6129</b><span class="muted">on GRID_POWER_PRICE_GENERAL</span></div>
-    <div class="stat"><b>Checked daily</b><span class="muted"><a href="https://github.com/investor567768/telegraph-provider/actions/workflows/accuracy.yml">public accuracy runs</a></span></div>
-  </div>
-
-  <h2>Try it</h2>
-  <section class="card">
-    <p class="muted">Type a zone, hub or node. Leave the time empty for the latest price.</p>
-    <div class="chips">
-      <button class="chip" data-q="CAISO NP15" data-m="day_ahead">CAISO NP15</button>
-      <button class="chip" data-q="CAISO SP15" data-m="day_ahead">CAISO SP15</button>
-      <button class="chip" data-q="N.Y.C." data-m="real_time">NYISO New York City</button>
-      <button class="chip" data-q="NYISO zone A" data-m="real_time">NYISO West (zone A)</button>
-      <button class="chip" data-q="MISO INDIANA.HUB" data-m="real_time">MISO Indiana hub</button>
-      <button class="chip" data-q="HB_WEST" data-m="">ERCOT HB_WEST (not covered)</button>
+<main class="wrap">
+  <header class="hero">
+    <h1>US grid power prices, straight from the operators.</h1>
+    <p class="muted">A Telegraph miner that answers wholesale electricity prices (LMP, in USD per MWh) for California, New York and the Midwest, with the exact interval and a link to the operator's own file.</p>
+    <div class="stats">
+      <div class="stat"><b>3 operators</b><span class="muted">CAISO, NYISO, MISO</span></div>
+      <div class="stat"><b>Live miner #6129</b><span class="muted">on GRID_POWER_PRICE_GENERAL</span></div>
+      <div class="stat"><b>Checked daily</b><span class="muted"><a href="https://github.com/investor567768/telegraph-provider/actions/workflows/accuracy.yml">public accuracy runs</a></span></div>
     </div>
-    <form id="f">
-      <input id="q" value="N.Y.C." aria-label="Zone, hub or node">
-      <select id="m" aria-label="Market">
-        <option value="">Default market</option>
-        <option value="real_time">Real-time</option>
-        <option value="day_ahead">Day-ahead</option>
-      </select>
-      <input id="t" type="datetime-local" aria-label="Interval start (your local time)">
-      <button id="go">Get price</button>
-    </form>
-    <div class="out" id="out"><span class="muted">Pick an example above or type your own.</span></div>
+  </header>
+
+  <section class="block">
+    <h2>Try it</h2>
+    <div class="card">
+      <p class="muted">Type a zone, hub or node. Leave the time empty for the latest price.</p>
+      <div class="chips">
+        <button class="chip" data-q="CAISO NP15" data-m="day_ahead">CAISO NP15</button>
+        <button class="chip" data-q="CAISO SP15" data-m="day_ahead">CAISO SP15</button>
+        <button class="chip" data-q="N.Y.C." data-m="real_time">NYISO New York City</button>
+        <button class="chip" data-q="NYISO zone A" data-m="real_time">NYISO West (zone A)</button>
+        <button class="chip" data-q="MISO INDIANA.HUB" data-m="real_time">MISO Indiana hub</button>
+        <button class="chip" data-q="HB_WEST" data-m="">ERCOT HB_WEST (not covered)</button>
+      </div>
+      <form id="f">
+        <input id="q" value="N.Y.C." aria-label="Zone, hub or node">
+        <select id="m" aria-label="Market">
+          <option value="">Default market</option>
+          <option value="real_time">Real-time</option>
+          <option value="day_ahead">Day-ahead</option>
+        </select>
+        <input id="t" type="datetime-local" aria-label="Interval start (your local time)">
+        <button class="go" id="go">Get price</button>
+      </form>
+      <div class="out" id="out" aria-live="polite"><span class="muted">Pick an example above or type your own.</span></div>
+    </div>
   </section>
 
-  <h2>What it covers</h2>
-  <table>
-    <thead><tr><th>Operator</th><th>Locations</th><th>Markets</th><th>Operator's data</th></tr></thead>
-    <tbody>
-      <tr><td>CAISO (California)</td><td>Trading hubs NP15, SP15, ZP26</td><td>Day-ahead, any date</td><td>OASIS PRC_LMP, times in GMT</td></tr>
-      <tr><td>NYISO (New York)</td><td>All 11 zones, A (West) to K (Long Island)</td><td>Real-time and day-ahead</td><td>Zonal LBMP files, stamped in Eastern time</td></tr>
-      <tr><td>MISO (Midwest)</td><td>Hubs (Indiana, Illinois, Michigan, Minnesota and others) and named nodes</td><td>Real-time, current day</td><td>5-minute ex-post LMP, published in EST</td></tr>
-    </tbody>
-  </table>
+  <section class="block">
+    <h2>What it covers</h2>
+    <table>
+      <thead><tr><th>Operator</th><th>Locations</th><th>Markets</th><th>Operator's data</th></tr></thead>
+      <tbody>
+        <tr><td>CAISO (California)</td><td data-l="Locations">Trading hubs NP15, SP15, ZP26</td><td data-l="Markets">Day-ahead, any date</td><td data-l="Data">OASIS PRC_LMP, times in GMT</td></tr>
+        <tr><td>NYISO (New York)</td><td data-l="Locations">All 11 zones, A (West) to K (Long Island)</td><td data-l="Markets">Real-time and day-ahead</td><td data-l="Data">Zonal LBMP files, stamped in Eastern time</td></tr>
+        <tr><td>MISO (Midwest)</td><td data-l="Locations">Hubs (Indiana, Illinois, Michigan, Minnesota and others) and named nodes</td><td data-l="Markets">Real-time, current day</td><td data-l="Data">5-minute ex-post LMP, published in EST</td></tr>
+      </tbody>
+    </table>
+  </section>
 
-  <h2>How it stays honest</h2>
-  <p class="muted">Every answer names the operator, the exact interval it covers and the operator's own file, so it can be checked by hand. Operators stamp their times differently (NYISO marks the end of each interval, MISO uses EST all year, CAISO uses GMT), and the miner converts each one to an exact UTC interval. Places it doesn't cover, such as ERCOT in Texas, are refused rather than matched to a similar-sounding name. A scheduled job compares its answers against the operators' published files every day and posts the results publicly.</p>
+  <section class="block">
+    <h2>How it stays honest</h2>
+    <p class="muted">Every answer names the operator, the exact interval it covers and the operator's own file, so it can be checked by hand. Operators stamp their times differently (NYISO marks the end of each interval, MISO uses EST all year, CAISO uses GMT), and the miner converts each one to an exact UTC interval. Places it doesn't cover, such as ERCOT in Texas, are refused rather than matched to a similar-sounding name. A scheduled job compares its answers against the operators' published files every day and posts the results publicly.</p>
+  </section>
 
-  <footer>Endpoint: <code>https://telegraph-provider.vercel.app/api/grid-price?node_or_zone=…&amp;market=…&amp;interval_start=…</code>. Free and keyless.</footer>
+  <footer>
+    <div class="foot-links">
+      <a href="https://github.com/investor567768/telegraph-provider">Code <span>↗</span></a>
+      <a href="https://github.com/investor567768/telegraph-provider/actions/workflows/accuracy.yml">Accuracy runs <span>↗</span></a>
+    </div>
+    <p style="margin-bottom:8px">Endpoint, free and keyless:</p>
+    <div class="ep"><code id="ep">https://telegraph-provider.vercel.app/api/grid-price?node_or_zone=…&amp;market=…&amp;interval_start=…</code><button class="copy" type="button" id="copyEp">Copy</button></div>
+    <p>Built by Chrysolite for Telegraph Hackathon Season II, Miners track.</p>
+  </footer>
 </main>
 <script>
+  /* theme */
+  const root = document.documentElement;
+  function setTheme(t, save) {
+    root.setAttribute('data-theme', t);
+    document.getElementById('themeIcon').textContent = t === 'dark' ? '☀' : '☾';
+    document.getElementById('themeText').textContent = t === 'dark' ? 'Light' : 'Dark';
+    if (save) { try { localStorage.setItem('tp-theme', t); } catch (e) {} }
+  }
+  let start = 'dark';
+  try { const s = localStorage.getItem('tp-theme'); if (s === 'light' || s === 'dark') start = s; } catch (e) {}
+  const qp = new URLSearchParams(location.search).get('theme'); if (qp === 'light' || qp === 'dark') start = qp;
+  setTheme(start, false);
+  document.getElementById('theme').addEventListener('click', () => setTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark', true));
+
+  /* copy endpoint */
+  document.getElementById('copyEp').addEventListener('click', async e => {
+    const b = e.currentTarget;
+    try { await navigator.clipboard.writeText('https://telegraph-provider.vercel.app/api/grid-price?node_or_zone=N.Y.C.&market=real_time'); b.textContent = 'Copied'; } catch (x) { b.textContent = 'Select and copy'; }
+    setTimeout(() => b.textContent = 'Copy', 1600);
+  });
+
+  /* try it (same request as before) */
   const API = 'https://telegraph-provider.vercel.app/api/grid-price';
   const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const out = document.getElementById('out'), go = document.getElementById('go');
@@ -103,7 +189,7 @@
       out.innerHTML = r.ok
         ? `<div class="big">$${esc(j.lmp_usd_per_mwh)} per MWh</div><div class="muted">${esc(j.operator)} · ${esc(j.node_or_zone)} · ${esc(String(j.market).replace('_', '-'))} · ${esc(j.interval_start)} to ${esc(j.interval_end)} UTC</div>`
         : `<span class="err">${esc(j.error || 'No answer')}</span>`;
-      out.innerHTML += `<pre>${esc(JSON.stringify(j, null, 2))}</pre>`;
+      out.innerHTML += `<details><summary>Raw answer</summary><pre>${esc(JSON.stringify(j, null, 2))}</pre></details>`;
     } catch (e) { out.innerHTML = '<span class="err">Could not reach the miner. Try again.</span>'; }
     go.disabled = false;
   }
