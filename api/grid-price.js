@@ -293,19 +293,32 @@ function unzipFirst(buf, wanted) {
   return { name, text: body.toString('utf8') };
 }
 const caisoTime = d => d.toISOString().slice(0, 16).replace(/-/g, '') + '-0000'; // 20260913T14:00-0000
+// OASIS throttles bursts (HTTP 429, or an XML error 1015). A throttled request is retried after a
+// short wait, so a buyer gets the price instead of an error. Waits are swappable for tests.
+const retry = { waitsMs: [2000, 4000], sleep: ms => new Promise(r => setTimeout(r, ms)) };
 async function getZip(url, ttlMs) {
   const hit = cache.get(url);
   if (hit && Date.now() - hit.at < ttlMs) return hit.body;
+  for (let i = 0; ; i++) {
+    try { return await getZipOnce(url); }
+    catch (e) {
+      if (!e.throttled || i >= retry.waitsMs.length) throw e;
+      await retry.sleep(retry.waitsMs[i]);
+    }
+  }
+}
+function throttled() { const e = new AnswerError(503, 'CAISO OASIS is limiting requests and was still busy after two retries. Try again in a minute.'); e.throttled = true; return e; }
+async function getZipOnce(url) {
   let r;
   try { r = await fetch(url, { headers: UA }); }
   catch (e) { throw new AnswerError(502, 'CAISO OASIS could not be reached. Try again shortly.'); }
-  if (r.status === 429) throw new AnswerError(503, 'CAISO OASIS is limiting requests. Try again in a few seconds.');
+  if (r.status === 429) throw throttled();
   if (!r.ok) throw new AnswerError(502, `CAISO OASIS answered HTTP ${r.status}.`);
   const out = unzipFirst(Buffer.from(await r.arrayBuffer()));
   if (/\.xml$/i.test(out.name) || /^\s*</.test(out.text)) {
     const desc = (out.text.match(/<(?:\w+:)?ERR_DESC>([^<]*)</) || [])[1] || 'unknown error';
     const code = (out.text.match(/<(?:\w+:)?ERR_CODE>([^<]*)</) || [])[1] || '';
-    if (code === '1015' || /too many/i.test(desc)) throw new AnswerError(503, 'CAISO OASIS is limiting requests. Try again in a few seconds.');
+    if (code === '1015' || /too many/i.test(desc)) throw throttled();
     throw new AnswerError(404, `CAISO OASIS returned no price: ${desc.trim()}`);
   }
   cache.set(url, { at: Date.now(), body: out.text });
@@ -390,4 +403,4 @@ export default async function handler(req, res) {
   }
 }
 
-export { answer, resolveLocation, unzipFirst, parseNyisoStamp, nyisoStampsInOrder, parseMisoStamp, easternToUtc, AnswerError, cache };
+export { answer, resolveLocation, unzipFirst, parseNyisoStamp, nyisoStampsInOrder, parseMisoStamp, easternToUtc, AnswerError, cache, retry };

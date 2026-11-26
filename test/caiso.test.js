@@ -83,3 +83,27 @@ test('ERCOT names are refused, never mapped to NYISO WEST/NORTH (bug found 20 No
   assert.equal(resolveLocation('NYISO zone A').name, 'WEST');
   assert.equal(resolveLocation('MISO TEXAS.HUB').name, 'TEXAS.HUB');    // MISO's Texas hub still works
 });
+
+// Throttling (reported by independent tester Jennycruzy, 26 Nov 2026): OASIS sometimes answers a
+// burst with HTTP 429 or XML error 1015. The miner waits and retries instead of failing.
+test('CAISO: a throttled request is retried and answered', async () => {
+  const { retry } = await import('../api/grid-price.js');
+  const waits = []; retry.sleep = async ms => { waits.push(ms); };
+  cache.clear(); globalThis.__urls = [];
+  const good = zip('PRC_LMP.csv', CSV), busy = zip('err.xml', '<m:ERR_CODE>1015</m:ERR_CODE><m:ERR_DESC>Too many requests</m:ERR_DESC>');
+  const replies = [{ status: 429 }, { status: 200, body: busy }, { status: 200, body: good }];
+  globalThis.fetch = async url => { globalThis.__urls.push(url); const r = replies.shift();
+    return { ok: r.status === 200, status: r.status, arrayBuffer: async () => r.body.buffer.slice(r.body.byteOffset, r.body.byteOffset + r.body.length) }; };
+  const a = await answer({ node_or_zone: 'CAISO', interval_start: '2026-09-13T14:00:00Z' });
+  assert.equal(a.lmp_usd_per_mwh, 38.09459);
+  assert.deepEqual(waits, [2000, 4000]);
+  assert.equal(globalThis.__urls.length, 3);
+});
+
+test('CAISO: still throttled after two retries gives a clear error, not a wrong price', async () => {
+  const { retry } = await import('../api/grid-price.js');
+  retry.sleep = async () => {};
+  cache.clear();
+  globalThis.fetch = async () => ({ ok: false, status: 429, arrayBuffer: async () => new ArrayBuffer(0) });
+  await assert.rejects(answer({ node_or_zone: 'CAISO', interval_start: '2026-09-13T14:00:00Z' }), e => e.status === 503 && /still busy after two retries/.test(e.message));
+});
