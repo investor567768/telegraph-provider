@@ -6,6 +6,20 @@
 
 A Telegraph miner for `GRID_POWER_PRICE_GENERAL` that answers wholesale electricity prices for **three US grid operators (CAISO, NYISO and MISO)** straight from each operator's own public price file. It never estimates: when it cannot answer, it says why.
 
+## How this entry answers the judging rubric (Miners / Providers, 100 points)
+
+Source: the [official Season II rules](https://anjoman.ai/dashboard/hackathon/season-2/rules), section 6, read on 26 Nov 2026. Winning needs 70/100 and at least 24 of the 35 quality points. Each row says what we can show and, where it applies, what we do not claim.
+
+| What the rules score | Points | Our evidence |
+|---|---|---|
+| Independently evaluated intelligence quality (minimum 24) | 35 | 24 of 24 answers match the operators' own files, rechecked every day on GitHub's servers ([public run](https://github.com/investor567768/telegraph-provider/actions/runs/44534807922)). An independent builder, Jennycruzy, checked 15 answers against files she pulled from the operators herself: 15 of 15 match, after fixes her first test prompted ([Evidence](#evidence)). What it cannot answer is refused with a reason, never guessed. **No live network ranking is claimed.** |
+| Reliability, availability, and capacity | 15 | Daily public accuracy workflow; answers are cached; a throttled CAISO request is retried twice before any error; uncovered operators get a clear 404. |
+| Verified Intent coverage and application enablement | 10 | `GRID_POWER_PRICE_GENERAL` for three US operators: CAISO (day-ahead), NYISO (real-time and day-ahead, including archived days and the clock-change hour) and MISO (current operating day). Built for Mission 12, Mining & Power. |
+| Verified H2 mission application consumption | 10 | Paid usage on Telegraph: **$0.1197 USDC earned across 10 periods** (#18 to #55), shown in Anjoman → Activity. **We do not claim** use by a named mission app, independent app groups or ranked routing beyond what those records show. |
+| Cost, latency, and serving economics | 5 | No paid data source and no API key: every answer comes from the operator's own public file. Median response about 0.8 s over 5 live requests from Lagos on 26 Nov 2026 (0.65 to 0.90 s; the first request after idle took 3.2 s because it had to fetch the operator's file). |
+| Integration and documentation | 5 | Registered YAML pinned to one commit (#6129), run-it-yourself steps, 26 tests, sample requests and error cases below. |
+| Organic growth, education, and developer activation | 20 | An outside developer tested the miner, filed a [public issue](https://github.com/investor567768/telegraph-provider/issues/1), and confirmed the fixes in a rerun. Steps for another developer to try it are in this README. |
+
 ## For judges (5 minutes)
 
 | Check | Where | Time |
@@ -101,7 +115,7 @@ Errors are explicit, never a guessed price: unknown location (404), operator not
 | First run, 24 of 24 | [run 44534807922](https://github.com/investor567768/telegraph-provider/actions/runs/44534807922) |
 | Accuracy script (independent of the miner's code) | [test/accuracy.ps1](test/accuracy.ps1) |
 | Unit tests (26, including the real CAISO file of 13 Sep 2026 and a real zip holding the clock-change hour) | [test/](test/) · run `npm test` |
-| Independent test, 26 Nov 2026 | Jennycruzy (Discord, builder of MONEY OWED) checked 12 live answers against files she downloaded from the operators herself: 10 matched, 2 failed. Both fixed in [e9b7551](https://github.com/investor567768/telegraph-provider/commit/e9b7551). Her rerun the same day, again against her own operator files: **15 of 15 match**, including both edges of the repeated clock-change hour (04:55Z, 05:55Z, 06:55Z) and a day from the October monthly archive. [Her report](https://github.com/investor567768/telegraph-provider/issues/1) |
+| Independent test, 26 Nov 2026 | Jennycruzy (Discord, builder of [MONEY OWED](https://github.com/Jennycruzy/moneyowed)) checked 12 live answers against files she downloaded from the operators herself: 10 matched, 2 failed. Both fixed in [e9b7551](https://github.com/investor567768/telegraph-provider/commit/e9b7551). Her rerun the same day, again against her own operator files: **15 of 15 match**, including both edges of the repeated clock-change hour (04:55Z, 05:55Z, 06:55Z) and a day from the October monthly archive. This was a reciprocal test between two entrants: we also tested her project and filed [issues #2](https://github.com/Jennycruzy/moneyowed/issues/2) and [#3](https://github.com/Jennycruzy/moneyowed/issues/3) on it. Her report was written on her own and is public. [Her report](https://github.com/investor567768/telegraph-provider/issues/1) |
 | Registered YAML | [miner.yaml](miner.yaml) |
 | Paid earnings, 10 periods, $0.1197 USDC (26 Nov 2026) | [miner-6129-earnings.jpg](miner-6129-earnings.jpg) |
 
