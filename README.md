@@ -13,8 +13,23 @@ A Telegraph miner for `GRID_POWER_PRICE_GENERAL` that answers wholesale electric
 | Ask it the Intent's own scored question (CAISO day-ahead, 2026-09-13 14:00 UTC) | [live answer](https://telegraph-provider.vercel.app/api/grid-price?node_or_zone=CAISO&interval_start=2026-09-13T14:00:00Z), expected `38.09459`, the value in CAISO's OASIS file | 30 s |
 | See 24 of 24 answers match the operators' files, checked on GitHub's servers | [public accuracy run](https://github.com/investor567768/telegraph-provider/actions/runs/44534807922) (Summary table) | 1 min |
 | See that the check repeats every day | [Actions → Grid price accuracy](https://github.com/investor567768/telegraph-provider/actions/workflows/accuracy.yml) | 30 s |
+| See that buyers paid for its answers: **$0.1197 USDC earned across 10 periods** (#18 to #55) | [earnings screenshot, 26 Nov 2026](miner-6129-earnings.jpg) (Anjoman → Activity → Contributions and rewards) | 30 s |
 | Read the registered YAML (registration #6129), pinned to one commit | [miner.yaml at e18a1ec](https://raw.githubusercontent.com/investor567768/telegraph-provider/e18a1ec5cf2a70cf8dbbc983b902830549f66418/miner.yaml), SHA-256 `0x678c732b…1b8c7b` | 1 min |
 | Try any location yourself | [N.Y.C. now](https://telegraph-provider.vercel.app/api/grid-price?node_or_zone=NYC) · [MISO Indiana hub now](https://telegraph-provider.vercel.app/api/grid-price?node_or_zone=MISO%20Indiana%20hub) · [CAISO SP15](https://telegraph-provider.vercel.app/api/grid-price?node_or_zone=SP15) · [ERCOT, refused honestly](https://telegraph-provider.vercel.app/api/grid-price?node_or_zone=ERCOT%20Houston%20hub) | 2 min |
+
+## Paid usage on Telegraph
+
+Buyers on Telegraph have paid for this miner's answers. As of 26 Nov 2026, Anjoman's Activity page shows registration #6129 earned **$0.1197 USDC** in **10 separate periods** between #18 and #55, claimable to the miner's fee wallet `0xd020…8484`. The largest single period was #25 ($0.052 paid). Earnings came back period after period over several weeks, not in one burst. Nothing has been claimed yet; the claim will be made on camera in the demo video and its transaction linked here.
+
+![Miner #6129 earnings by period](miner-6129-earnings.jpg)
+
+## Ask it yourself through Telegraph
+
+1. Sign in at [anjoman.ai](https://anjoman.ai) and click **New job**.
+2. Ask a grid price question, for example: `What was the CAISO day-ahead price at NP15 for 2026-09-13 14:00 UTC?` (expected `38.09459` USD/MWh) or `What is the real-time price in New York City right now?`
+3. Telegraph routes it to `GRID_POWER_PRICE_GENERAL`, which several miners serve, so your job may or may not land on this one. An answer from this miner names the operator, the interval and the source file. Compare it with the [live endpoint](https://telegraph-provider.vercel.app/api/grid-price?node_or_zone=CAISO&interval_start=2026-09-13T14:00:00Z).
+
+Testnet only (Ethereum Sepolia). Each call costs about $0.01 in testnet USDC.
 
 ## Why it matters
 
@@ -86,6 +101,7 @@ Errors are explicit, never a guessed price: unknown location (404), operator not
 | Accuracy script (independent of the miner's code) | [test/accuracy.ps1](test/accuracy.ps1) |
 | Unit tests (12, including the real CAISO file of 13 Sep 2026) | [test/](test/) · run `npm test` |
 | Registered YAML | [miner.yaml](miner.yaml) |
+| Paid earnings, 10 periods, $0.1197 USDC (26 Nov 2026) | [miner-6129-earnings.jpg](miner-6129-earnings.jpg) |
 
 ## Honest limits
 
