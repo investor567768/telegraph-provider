@@ -28,7 +28,7 @@ Source: the [official Season II rules](https://anjoman.ai/dashboard/hackathon/se
 | Ask it the Intent's own scored question (CAISO day-ahead, 2026-09-13 14:00 UTC) | [live answer](https://telegraph-provider.vercel.app/api/grid-price?node_or_zone=CAISO&interval_start=2026-09-13T14:00:00Z), expected `38.09459`, the value in CAISO's OASIS file | 30 s |
 | See 24 of 24 answers match the operators' files, checked on GitHub's servers | [public accuracy run](https://github.com/investor567768/telegraph-provider/actions/runs/44534807922) (Summary table) | 1 min |
 | See that the check repeats every day | [Actions → Grid price accuracy](https://github.com/investor567768/telegraph-provider/actions/workflows/accuracy.yml) | 30 s |
-| See that buyers paid for its answers: **$0.1197 USDC earned across 10 periods** (#18 to #55) | [earnings screenshot, 26 Nov 2026](miner-6129-earnings.jpg) (Anjoman → Activity → Contributions and rewards) | 30 s |
+| See that buyers paid for its answers: **$0.1197 USDC earned across 10 periods** (#18 to #55) | [earnings screenshot, 26 Nov 2026](miner-6129-earnings.png) (Anjoman → Activity → Contributions and rewards) | 30 s |
 | See that another builder tested it independently: **15 of 15** answers matched the operators' own files, after three fixes | [Evidence table](#evidence): Jennycruzy's report, the fixes and the rerun (26 Nov 2026) | 1 min |
 | Read the registered YAML (registration #6129), pinned to one commit | [miner.yaml at e18a1ec](https://raw.githubusercontent.com/investor567768/telegraph-provider/e18a1ec5cf2a70cf8dbbc983b902830549f66418/miner.yaml), SHA-256 `0x678c732b…1b8c7b` | 1 min |
 | Try any location yourself | [N.Y.C. now](https://telegraph-provider.vercel.app/api/grid-price?node_or_zone=NYC) · [MISO Indiana hub now](https://telegraph-provider.vercel.app/api/grid-price?node_or_zone=MISO%20Indiana%20hub) · [CAISO SP15](https://telegraph-provider.vercel.app/api/grid-price?node_or_zone=SP15) · [ERCOT, refused honestly](https://telegraph-provider.vercel.app/api/grid-price?node_or_zone=ERCOT%20Houston%20hub) | 2 min |
@@ -37,7 +37,7 @@ Source: the [official Season II rules](https://anjoman.ai/dashboard/hackathon/se
 
 Buyers on Telegraph have paid for this miner's answers. As of 26 Nov 2026, Anjoman's Activity page shows registration #6129 earned **$0.1197 USDC** in **10 separate periods** between #18 and #55, claimable to the miner's fee wallet `0xd020…8484`. The largest single period was #25 ($0.052 paid). Earnings came back period after period over several weeks, not in one burst. On 26 Nov 2026 the $0.1197 USDC was claimed on camera in the [demo video](https://x.com/kingChrys494/status/2126013019054633373); the claim transaction ([0x81cdf8c6…7f6f32](https://sepolia.etherscan.io/tx/0x81cdf8c69f8b1c9c1b07a4aac21f1a8adc8e5759a8eb4566513cd6a92e7f6f32)) shows Success on the Sepolia testnet explorer: 0.119679 USDC sent to the miner's fee wallet.
 
-![Miner #6129 earnings by period](miner-6129-earnings.jpg)
+![Miner #6129 earnings by period](miner-6129-earnings.png)
 
 ## Ask it yourself through Telegraph
 
@@ -118,7 +118,7 @@ Errors are explicit, never a guessed price: unknown location (404), operator not
 | Unit tests (26, including the real CAISO file of 13 Sep 2026 and a real zip holding the clock-change hour) | [test/](test/) · run `npm test` |
 | Independent test, 26 Nov 2026 | Jennycruzy (Discord, builder of [MONEY OWED](https://github.com/Jennycruzy/moneyowed)) checked 12 live answers against files she downloaded from the operators herself: 10 matched, 2 failed. Both fixed in [e9b7551](https://github.com/investor567768/telegraph-provider/commit/e9b7551). Her rerun the same day, again against her own operator files: **15 of 15 match**, including both edges of the repeated clock-change hour (04:55Z, 05:55Z, 06:55Z) and a day from the October monthly archive. This was a reciprocal test between two entrants: we also tested her project and filed [issues #2](https://github.com/Jennycruzy/moneyowed/issues/2) and [#3](https://github.com/Jennycruzy/moneyowed/issues/3) on it. Her report was written on her own and is public. [Her report](https://github.com/investor567768/telegraph-provider/issues/1) |
 | Registered YAML | [miner.yaml](miner.yaml) |
-| Paid earnings, 10 periods, $0.1197 USDC (26 Nov 2026) | [miner-6129-earnings.jpg](miner-6129-earnings.jpg) |
+| Paid earnings, 10 periods, $0.1197 USDC (26 Nov 2026) | [miner-6129-earnings.png](miner-6129-earnings.png) |
 
 ## Honest limits
 
