@@ -18,12 +18,13 @@ Source: the [official Season II rules](https://anjoman.ai/dashboard/hackathon/se
 | Verified H2 mission application consumption | 10 | Paid usage on Telegraph: **$0.1197 USDC earned across 10 periods** (#18 to #55), shown in Anjoman → Activity. **We do not claim** use by a named mission app, independent app groups or ranked routing beyond what those records show. |
 | Cost, latency, and serving economics | 5 | No paid data source and no API key: every answer comes from the operator's own public file. Median response about 0.8 s over 5 live requests from Lagos on 26 Nov 2026 (0.65 to 0.90 s; the first request after idle took 3.2 s because it had to fetch the operator's file). |
 | Integration and documentation | 5 | Registered YAML pinned to one commit (#6129), run-it-yourself steps, 26 tests, sample requests and error cases below. |
-| Organic growth, education, and developer activation | 20 | An outside developer tested the miner, filed a [public issue](https://github.com/investor567768/telegraph-provider/issues/1), and confirmed the fixes in a rerun. Steps for another developer to try it are in this README. |
+| Organic growth, education, and developer activation | 20 | An outside developer tested the miner, filed a [public issue](https://github.com/investor567768/telegraph-provider/issues/1), and confirmed the fixes in a rerun. Steps for another developer to try it are in this README. A [2-minute demo video and public post on X](https://x.com/kingChrys494/status/2126013019054633373) (26 Nov 2026) explain the problem and show the miner working. |
 
 ## For judges (5 minutes)
 
 | Check | Where | Time |
 |---|---|---|
+| Watch the demo: live answers from all three operators, a refused ERCOT question, the 24 of 24 accuracy run, and the $0.1197 USDC claim | [2-minute demo video on X](https://x.com/kingChrys494/status/2126013019054633373) (26 Nov 2026) | 2 min |
 | Ask it the Intent's own scored question (CAISO day-ahead, 2026-09-13 14:00 UTC) | [live answer](https://telegraph-provider.vercel.app/api/grid-price?node_or_zone=CAISO&interval_start=2026-09-13T14:00:00Z), expected `38.09459`, the value in CAISO's OASIS file | 30 s |
 | See 24 of 24 answers match the operators' files, checked on GitHub's servers | [public accuracy run](https://github.com/investor567768/telegraph-provider/actions/runs/44534807922) (Summary table) | 1 min |
 | See that the check repeats every day | [Actions → Grid price accuracy](https://github.com/investor567768/telegraph-provider/actions/workflows/accuracy.yml) | 30 s |
@@ -34,7 +35,7 @@ Source: the [official Season II rules](https://anjoman.ai/dashboard/hackathon/se
 
 ## Paid usage on Telegraph
 
-Buyers on Telegraph have paid for this miner's answers. As of 26 Nov 2026, Anjoman's Activity page shows registration #6129 earned **$0.1197 USDC** in **10 separate periods** between #18 and #55, claimable to the miner's fee wallet `0xd020…8484`. The largest single period was #25 ($0.052 paid). Earnings came back period after period over several weeks, not in one burst. Nothing has been claimed yet; the claim will be made on camera in the demo video and its transaction linked here.
+Buyers on Telegraph have paid for this miner's answers. As of 26 Nov 2026, Anjoman's Activity page shows registration #6129 earned **$0.1197 USDC** in **10 separate periods** between #18 and #55, claimable to the miner's fee wallet `0xd020…8484`. The largest single period was #25 ($0.052 paid). Earnings came back period after period over several weeks, not in one burst. On 26 Nov 2026 the $0.1197 USDC was claimed on camera in the [demo video](https://x.com/kingChrys494/status/2126013019054633373); the claim transaction ([0x81cdf8c6…7f6f32](https://sepolia.etherscan.io/tx/0x81cdf8c69f8b1c9c1b07a4aac21f1a8adc8e5759a8eb4566513cd6a92e7f6f32)) shows Success on the Sepolia testnet explorer: 0.119679 USDC sent to the miner's fee wallet.
 
 ![Miner #6129 earnings by period](miner-6129-earnings.jpg)
 
