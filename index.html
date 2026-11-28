@@ -30,7 +30,7 @@
 
   .bar { position:sticky; top:0; z-index:10; backdrop-filter:blur(12px); background:color-mix(in srgb,var(--bg) 82%,transparent); border-bottom:1px solid var(--line); }
   .bar .in { display:flex; align-items:center; justify-content:space-between; height:58px; }
-  .brand { font-weight:700; letter-spacing:-.02em; display:flex; gap:10px; align-items:center; }
+  .brand { color:inherit; text-decoration:none; font-weight:700; letter-spacing:-.02em; display:flex; gap:10px; align-items:center; }
   .logo { width:28px; height:28px; border-radius:8px; background:var(--accent); color:var(--accent-ink); display:grid; place-items:center; font-weight:800; }
   .theme { appearance:none; border:1px solid var(--line-2); background:var(--card); color:var(--text); border-radius:10px; padding:8px 12px; font:500 .9rem 'Geist',sans-serif; cursor:pointer; display:flex; gap:8px; align-items:center; }
   .theme:hover { border-color:var(--accent); }
@@ -91,7 +91,7 @@
 </head>
 <body>
 <div class="bar"><div class="wrap in">
-  <div class="brand"><span class="logo">P</span><b>Telegraph Provider</b></div>
+  <a class="brand" href="/" aria-label="Telegraph Provider, reload the page"><span class="logo">P</span><b>Telegraph Provider</b></a>
   <nav class="navlinks" aria-label="Sections"><a href="#grid">Grid prices</a><a href="#route">Freight routes</a></nav>
   <button class="theme" id="theme" type="button" aria-label="Switch between dark and light mode"><span id="themeIcon">☀</span><span id="themeText">Light</span></button>
 </div></div>
@@ -101,9 +101,9 @@
     <h1>Answers straight from the source, not from a guess.</h1>
     <p class="muted">Two Telegraph miners. One reads US wholesale electricity prices from the grid operators' own files. The other gives driving time between any two places with the borders crossed, a truck time and a ferry flag, and refuses to guess an ambiguous place name.</p>
     <div class="stats">
-      <div class="stat"><b>2 miners</b><span class="muted"><a href="#grid">grid prices</a> and <a href="#route">freight routes</a></span></div>
-      <div class="stat"><b>Live miner #6129</b><span class="muted">on GRID_POWER_PRICE_GENERAL</span></div>
-      <div class="stat"><b>Checked daily</b><span class="muted">grid prices: <a href="https://github.com/investor567768/telegraph-provider/actions/workflows/accuracy.yml">public accuracy runs</a></span></div>
+      <div class="stat"><b>2 miners, both live</b><span class="muted"><a href="#grid">grid prices</a> and <a href="#route">freight routes</a></span></div>
+      <div class="stat"><b>#6129 and #6224</b><span class="muted">on GRID_POWER_PRICE_GENERAL and ROUTE_ETA_GENERAL</span></div>
+      <div class="stat"><b>Checked</b><span class="muted">grid prices daily: <a href="https://github.com/investor567768/telegraph-provider/actions/workflows/accuracy.yml">public accuracy runs</a>. Routes: <a href="https://github.com/investor567768/telegraph-provider/blob/main/test/route-eta.test.js">11 tests</a></span></div>
     </div>
   </header>
 
