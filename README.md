@@ -43,6 +43,16 @@ Source: the [official Season II rules](https://anjoman.ai/dashboard/hackathon/se
 | Read the registered YAML (registration #6129), pinned to one commit | [miner.yaml at e18a1ec](https://raw.githubusercontent.com/investor567768/telegraph-provider/e18a1ec5cf2a70cf8dbbc983b902830549f66418/miner.yaml), SHA-256 `0x678c732b…1b8c7b` | 1 min |
 | Try any location yourself | [N.Y.C. now](https://telegraph-provider.vercel.app/api/grid-price?node_or_zone=NYC) · [MISO Indiana hub now](https://telegraph-provider.vercel.app/api/grid-price?node_or_zone=MISO%20Indiana%20hub) · [CAISO SP15](https://telegraph-provider.vercel.app/api/grid-price?node_or_zone=SP15) · [ERCOT, refused honestly](https://telegraph-provider.vercel.app/api/grid-price?node_or_zone=ERCOT%20Houston%20hub) | 2 min |
 
+## Miner–Intent pair and what it enables
+
+| Miner | Intent | Registration | Mission | Network |
+|---|---|---|---|---|
+| `chrysolite-telegraph-provider` (YAML id `7319205`) | `GRID_POWER_PRICE_GENERAL` | #6129, LIVE | 12 Mining & Power | Telegraph testnet (Ethereum Sepolia) |
+
+**What it enables.** An app that decides when to draw or curtail power (a data-centre scheduler, an EV fleet, a bitcoin miner) can buy an operator-published price for an exact interval, with the source file, instead of a guessed or smoothed number. Mission 12 builders can test an app against it today: [N.Y.C. now](https://telegraph-provider.vercel.app/api/grid-price?node_or_zone=NYC), [CAISO SP15](https://telegraph-provider.vercel.app/api/grid-price?node_or_zone=SP15).
+
+**What we do not claim.** No named H2 mission app and no independent app group has used this miner yet, and we do not claim ranked routing. The paid usage is the $0.1197 USDC shown under [Paid usage on Telegraph](#paid-usage-on-telegraph).
+
 ## Paid usage on Telegraph
 
 Buyers on Telegraph have paid for this miner's answers. As of 26 Nov 2026, Anjoman's Activity page shows registration #6129 earned **$0.1197 USDC** in **10 separate periods** between #18 and #55, claimable to the miner's fee wallet `0xd020…8484`. The largest single period was #25 ($0.052 paid). Earnings came back period after period over several weeks, not in one burst. On 26 Nov 2026 the $0.1197 USDC was claimed on camera in the [demo video](https://x.com/kingChrys494/status/2126013019054633373); the claim transaction ([0x81cdf8c6…7f6f32](https://sepolia.etherscan.io/tx/0x81cdf8c69f8b1c9c1b07a4aac21f1a8adc8e5759a8eb4566513cd6a92e7f6f32)) shows Success on the Sepolia testnet explorer: 0.119679 USDC sent to the miner's fee wallet.
