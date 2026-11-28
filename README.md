@@ -20,6 +20,16 @@ Source: the [official Season II rules](https://anjoman.ai/dashboard/hackathon/se
 | Integration and documentation | 5 | Registered YAML pinned to one commit (#6129), run-it-yourself steps, 26 tests, sample requests and error cases below. |
 | Organic growth, education, and developer activation | 20 | An outside developer tested the miner, filed a [public issue](https://github.com/investor567768/telegraph-provider/issues/1), and confirmed the fixes in a rerun. Steps for another developer to try it are in this README. A [2-minute demo video and public post on X](https://x.com/kingChrys494/status/2126013019054633373) (26 Nov 2026) explain the problem and show the miner working. |
 
+## The five steps the organisers ask judges to take
+
+| Step | What to do here |
+|---|---|
+| Run it | Ask the live miner something new: [N.Y.C. now](https://telegraph-provider.vercel.app/api/grid-price?node_or_zone=NYC), [MISO Indiana hub now](https://telegraph-provider.vercel.app/api/grid-price?node_or_zone=MISO%20Indiana%20hub) or [CAISO SP15](https://telegraph-provider.vercel.app/api/grid-price?node_or_zone=SP15). Or sign in at anjoman.ai and follow [Ask it yourself through Telegraph](#ask-it-yourself-through-telegraph). No key needed for the endpoint. |
+| Check it | Every answer names the operator, the exact interval in UTC, the operator's own time stamp and the source file. Compare the number with that file, or open the [public accuracy run](https://github.com/investor567768/telegraph-provider/actions/runs/44534807922) (24 of 24 match). |
+| Inspect it | Anjoman → Activity shows registration #6129 and its paid periods ([screenshot](miner-6129-earnings.png), $0.1197 USDC across 10 periods). The claim transaction is on the [Sepolia explorer](https://sepolia.etherscan.io/tx/0x81cdf8c69f8b1c9c1b07a4aac21f1a8adc8e5759a8eb4566513cd6a92e7f6f32). |
+| Break it | Ask for something it should not answer: [ERCOT](https://telegraph-provider.vercel.app/api/grid-price?node_or_zone=ERCOT%20Houston%20hub) (refused with a 404 and a reason), a date in the future, or a place that does not exist. It refuses instead of guessing. |
+| Reproduce it | `git clone https://github.com/investor567768/telegraph-provider`, then `npm test` (26 tests, Node 18+). The daily [accuracy workflow](https://github.com/investor567768/telegraph-provider/actions/workflows/accuracy.yml) and [test/accuracy.ps1](test/accuracy.ps1) repeat the live check. |
+
 ## For judges (5 minutes)
 
 | Check | Where | Time |
@@ -132,7 +142,7 @@ Errors are explicit, never a guessed price: unknown location (404), operator not
 
 ## Tests
 
-- `npm test`: 12 unit tests (location matching, daylight saving, NYISO, MISO, CAISO zip parsing and error cases).
+- `npm test`: 26 unit tests (location matching, daylight saving, NYISO including the clock-change archive, MISO, CAISO zip parsing and error cases, and the CVE truth source).
 - `test/accuracy.ps1`: the live accuracy check, run daily by GitHub Actions.
 
 Note (21 Nov 2026): `api/truth/cve.js` is part of my Evaluators entry, not this miner. It was first deployed here by mistake and now lives in [telegraph-evaluator](https://github.com/investor567768/telegraph-evaluator). This copy stays online only because an earlier truth-source submission still points to it.
