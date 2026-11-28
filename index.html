@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Telegraph Provider: US grid power prices (CAISO, NYISO, MISO)</title>
-<meta name="description" content="A Telegraph miner that answers wholesale electricity prices (LMP) for CAISO, NYISO and MISO from each grid operator's own public data.">
+<title>Telegraph Provider: US grid power prices and border-aware freight routes</title>
+<meta name="description" content="Two Telegraph miners that answer from public sources: wholesale electricity prices for CAISO, NYISO and MISO, and driving time with borders, truck time and ferry flag between any two places.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -71,6 +71,13 @@
     td[data-l]::before { content:attr(data-l) ": "; color:var(--muted); font-weight:400; }
   }
 
+  .navlinks { display:flex; gap:6px; align-items:center; }
+  .navlinks a { color:var(--muted); text-decoration:none; font-weight:500; font-size:.92rem; padding:8px 10px; border-radius:8px; }
+  .navlinks a:hover { color:var(--text); }
+  @media (max-width:640px){ .navlinks { display:none; } }
+  .out .opts { margin:8px 0 0; padding-left:18px; }
+  .out .bd { margin-top:8px; }
+  .form-route input { min-width:180px; }
   footer { margin-top:52px; padding:32px 0 56px; border-top:1px solid var(--line); color:var(--muted); font-size:.92rem; }
   .foot-links { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px; }
   .foot-links a { display:inline-flex; gap:8px; align-items:center; padding:10px 14px; border:1px solid var(--line-2); border-radius:12px; color:var(--text); text-decoration:none; font-weight:600; font-size:.95rem; background:var(--card); }
@@ -85,22 +92,23 @@
 <body>
 <div class="bar"><div class="wrap in">
   <div class="brand"><span class="logo">P</span><b>Telegraph Provider</b></div>
+  <nav class="navlinks" aria-label="Sections"><a href="#grid">Grid prices</a><a href="#route">Freight routes</a></nav>
   <button class="theme" id="theme" type="button" aria-label="Switch between dark and light mode"><span id="themeIcon">☀</span><span id="themeText">Light</span></button>
 </div></div>
 
 <main class="wrap">
   <header class="hero">
-    <h1>US grid power prices, straight from the operators.</h1>
-    <p class="muted">A Telegraph miner that answers wholesale electricity prices (LMP, in USD per MWh) for California, New York and the Midwest, with the exact interval and a link to the operator's own file.</p>
+    <h1>Answers straight from the source, not from a guess.</h1>
+    <p class="muted">Two Telegraph miners. One reads US wholesale electricity prices from the grid operators' own files. The other gives driving time between any two places with the borders crossed, a truck time and a ferry flag, and refuses to guess an ambiguous place name.</p>
     <div class="stats">
-      <div class="stat"><b>3 operators</b><span class="muted">CAISO, NYISO, MISO</span></div>
+      <div class="stat"><b>2 miners</b><span class="muted"><a href="#grid">grid prices</a> and <a href="#route">freight routes</a></span></div>
       <div class="stat"><b>Live miner #6129</b><span class="muted">on GRID_POWER_PRICE_GENERAL</span></div>
-      <div class="stat"><b>Checked daily</b><span class="muted"><a href="https://github.com/investor567768/telegraph-provider/actions/workflows/accuracy.yml">public accuracy runs</a></span></div>
+      <div class="stat"><b>Checked daily</b><span class="muted">grid prices: <a href="https://github.com/investor567768/telegraph-provider/actions/workflows/accuracy.yml">public accuracy runs</a></span></div>
     </div>
   </header>
 
-  <section class="block">
-    <h2>Try it</h2>
+  <section class="block" id="grid">
+    <h2>Grid power prices: try it</h2>
     <div class="card">
       <p class="muted">Type a zone, hub or node. Leave the time empty for the latest price.</p>
       <div class="chips">
@@ -142,6 +150,25 @@
     <p class="muted">Every answer names the operator, the exact interval it covers and the operator's own file, so it can be checked by hand. Operators stamp their times differently (NYISO marks the end of each interval, MISO uses EST all year, CAISO uses GMT), and the miner converts each one to an exact UTC interval. Places it doesn't cover, such as ERCOT in Texas, are refused rather than matched to a similar-sounding name. A scheduled job compares its answers against the operators' published files every day and posts the results publicly.</p>
   </section>
 
+  <section class="block" id="route">
+    <h2>Border-aware freight route ETA</h2>
+    <p class="muted">Driving time between two places, from OpenStreetMap routing, for the <code>ROUTE_ETA_GENERAL</code> Intent. The scored answer is the car time in seconds. Next to it: every border the route crosses, in order, a truck time and a ferry flag. A name that matches places in different countries, such as Lagos in Nigeria and Lagos in Portugal, is settled by the other end of the route or refused with the options. No live traffic.</p>
+    <div class="card">
+      <div class="chips">
+        <button class="chip" data-o="Lagos" data-d="Accra">Lagos to Accra (3 borders)</button>
+        <button class="chip" data-o="Lagos" data-d="Ibadan">Lagos to Ibadan</button>
+        <button class="chip" data-o="Nairobi" data-d="Mombasa">Nairobi to Mombasa</button>
+        <button class="chip" data-o="Lagos" data-d="21.8, -2.8">Lagos to a point in the Sahara (refused)</button>
+      </div>
+      <form id="rf" class="form-route">
+        <input id="ro" value="Lagos" aria-label="Origin">
+        <input id="rd" value="Accra" aria-label="Destination">
+        <button class="go" id="rgo">Get route</button>
+      </form>
+      <div class="out" id="rout" aria-live="polite"><span class="muted">Pick an example above or type two places. Add the country if a name is ambiguous.</span></div>
+    </div>
+  </section>
+
   <footer>
     <div class="foot-links">
       <a href="https://github.com/investor567768/telegraph-provider">Code <span>↗</span></a>
@@ -149,6 +176,7 @@
     </div>
     <p style="margin-bottom:8px">Endpoint, free and keyless:</p>
     <div class="ep"><code id="ep">https://telegraph-provider.vercel.app/api/grid-price?node_or_zone=…&amp;market=…&amp;interval_start=…</code><button class="copy" type="button" id="copyEp">Copy</button></div>
+    <div class="ep"><code>https://telegraph-provider.vercel.app/api/route-eta?origin=Lagos&amp;destination=Accra</code><button class="copy" type="button" id="copyEp2">Copy</button></div>
     <p>Built by Chrysolite for Telegraph Hackathon Season II, Miners track.</p>
   </footer>
 </main>
@@ -174,6 +202,12 @@
     setTimeout(() => b.textContent = 'Copy', 1600);
   });
 
+  document.getElementById('copyEp2').addEventListener('click', async e => {
+    const b = e.currentTarget;
+    try { await navigator.clipboard.writeText('https://telegraph-provider.vercel.app/api/route-eta?origin=Lagos&destination=Accra'); b.textContent = 'Copied'; } catch (x) { b.textContent = 'Select and copy'; }
+    setTimeout(() => b.textContent = 'Copy', 1600);
+  });
+
   /* try it (same request as before) */
   const API = 'https://telegraph-provider.vercel.app/api/grid-price';
   const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -194,11 +228,45 @@
     go.disabled = false;
   }
   document.getElementById('f').addEventListener('submit', e => { e.preventDefault(); run(); });
-  document.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.chip[data-q]').forEach(b => b.addEventListener('click', () => {
     document.getElementById('q').value = b.dataset.q;
     document.getElementById('m').value = b.dataset.m;
     document.getElementById('t').value = '';
     run();
+  }));
+
+  /* freight route */
+  const ROUTE = 'https://telegraph-provider.vercel.app/api/route-eta';
+  const rout = document.getElementById('rout'), rgo = document.getElementById('rgo');
+  const hm = sec => { const h = Math.floor(sec / 3600), m = Math.round((sec % 3600) / 60); return h ? `${h} h ${m} min` : `${m} min`; };
+  async function runRoute() {
+    const p = new URLSearchParams({ origin: document.getElementById('ro').value.trim(), destination: document.getElementById('rd').value.trim() });
+    rgo.disabled = true; rout.innerHTML = '<span class="muted">Finding the route. This takes a few seconds…</span>';
+    try {
+      const r = await fetch(ROUTE + '?' + p);
+      const j = await r.json();
+      if (r.ok) {
+        const bc = j.border_crossings;
+        const borders = bc == null ? 'Border list not available for this answer.'
+          : bc.length ? `Crosses ${bc.length} border${bc.length > 1 ? 's' : ''}: ${bc.map(c => esc(c.from) + ' to ' + esc(c.to)).join(', ')}.`
+          : `Stays inside ${esc((j.countries_on_route || [])[0] || 'one country')}.`;
+        rout.innerHTML = `<div class="big">${esc(hm(j.duration))} by car</div>`
+          + `<div class="muted">${esc(Math.round(j.distance_m / 1000))} km · ${j.truck_duration != null ? esc(hm(j.truck_duration)) + ' by truck' : 'truck time not available'} · ${j.has_ferry ? 'uses a ferry' : 'no ferry'}</div>`
+          + `<div class="bd">${borders}</div>`
+          + `<div class="muted bd">${esc(j.origin.name)} to ${esc(j.destination.name)}. No live traffic.</div>`;
+      } else {
+        rout.innerHTML = `<span class="err">${esc(j.error || 'No answer')}</span>`
+          + (Array.isArray(j.options) ? `<ul class="opts">${j.options.map(o => `<li>${esc(o.name)}</li>`).join('')}</ul>` : '');
+      }
+      rout.innerHTML += `<details><summary>Raw answer</summary><pre>${esc(JSON.stringify(j, null, 2))}</pre></details>`;
+    } catch (e) { rout.innerHTML = '<span class="err">Could not reach the miner. Try again.</span>'; }
+    rgo.disabled = false;
+  }
+  document.getElementById('rf').addEventListener('submit', e => { e.preventDefault(); runRoute(); });
+  document.querySelectorAll('.chip[data-o]').forEach(b => b.addEventListener('click', () => {
+    document.getElementById('ro').value = b.dataset.o;
+    document.getElementById('rd').value = b.dataset.d;
+    runRoute();
   }));
 </script>
 </body>
