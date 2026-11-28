@@ -1,0 +1,98 @@
+version: "1"
+kind: miner
+id: 7319206
+slug: chrysolite-border-aware-route-eta
+protocol: generic
+name: Border-Aware Freight Route ETA
+description: >-
+  Driving time between any two places worldwide, from OpenStreetMap routing, with what a
+  freight or delivery agent needs next to it: every national border the route crosses, in
+  order, a truck driving time, and whether the route relies on a ferry. Place names are
+  never guessed: a name that matches places in different countries is settled by the other
+  end of the route, or refused with the options. Tested hardest on African routes such as
+  Lagos to Accra, which no other miner on this Intent covers. No live traffic.
+base_url: https://telegraph-provider.vercel.app
+
+rate_limit_per_sec: 1
+cache_ttl_sec: 0
+circuit_threshold: 5
+circuit_cooldown_seconds: 30
+
+docs:
+  repository: https://github.com/investor567768/telegraph-provider
+  documentation: https://github.com/investor567768/telegraph-provider#readme
+
+errors:
+  message_path: error
+
+endpoints:
+  - path: /route-eta
+    external_path: /api/route-eta
+    method: GET
+    description: >-
+      Car driving time in whole seconds between origin and destination, from the OSRM
+      server on OpenStreetMap data, plus distance, the resolved places, the border crossings
+      in order, the countries on the route, a truck time from Valhalla and a ferry flag.
+      A place name matching places in more than one country returns HTTP 422 with the
+      options when the route cannot settle it; no driving route returns HTTP 404.
+    intents: [ROUTE_ETA_GENERAL]
+    params:
+      query:
+        required:
+          - name: origin
+            type: string
+            intents: ["*"]
+            description: >-
+              Start point: a place name (city, town, address), optionally with its country,
+              for example "Lagos" or "Lagos, Nigeria", or latitude,longitude such as 6.455,3.394.
+          - name: destination
+            type: string
+            intents: ["*"]
+            description: >-
+              End point, in the same forms as origin, for example "Accra" or 5.56,-0.2057.
+
+intent_mapping:
+  ROUTE_ETA_GENERAL:
+    endpoint: /route-eta
+    input:
+      origin:
+        from: origin
+        how: >-
+          The start of the route as the question names it. If the question gives coordinates
+          for it, write them as latitude,longitude.
+      destination:
+        from: destination
+        how: >-
+          The end of the route as the question names it. If the question gives coordinates
+          for it, write them as latitude,longitude.
+    output:
+      duration: { path: duration }
+
+semantics:
+  signal_mapping:
+    confidence_field: confidence
+    label_field: verdict
+    reason_field: reason
+  supported_intents:
+    - ROUTE_ETA_GENERAL
+
+output_schema:
+  type: object
+  properties:
+    duration: { type: number }
+    distance_m: { type: number }
+    origin: { type: object }
+    destination: { type: object }
+    border_crossings: { type: array }
+    countries_on_route: { type: array }
+    truck_duration: { type: number }
+    has_ferry: { type: boolean }
+    profile: { type: string }
+    truck_profile: { type: string }
+    source_url: { type: string }
+    sources: { type: array }
+    attribution: { type: string }
+    verdict: { type: string }
+    confidence: { type: number }
+    reason: { type: string }
+    checked_at: { type: string }
