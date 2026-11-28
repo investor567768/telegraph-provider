@@ -53,6 +53,19 @@ Source: the [official Season II rules](https://anjoman.ai/dashboard/hackathon/se
 
 **What we do not claim.** No named H2 mission app and no independent app group has used this miner yet, and we do not claim ranked routing. The paid usage is the $0.1197 USDC shown under [Paid usage on Telegraph](#paid-usage-on-telegraph).
 
+## Missions this miner enables
+
+`GRID_POWER_PRICE_GENERAL` is listed on the mission pages as shared by three missions. We checked every mission page; two list it in their example builds, and the third is not yet confirmed, so it is not claimed here.
+
+| Mission | Where the Intent appears | What a builder can do with this miner | Repeatable test |
+|---|---|---|---|
+| 12 Mining & Power | Listed as a shared Intent on the mission page | Decide when to run or curtail power-hungry work against a published price for an exact interval | [N.Y.C. now](https://telegraph-provider.vercel.app/api/grid-price?node_or_zone=NYC) |
+| 11 Autonomous Systems | Bought in the example build "A closed economy inside one portfolio", next to sensor and weather checks | Give an autonomous agent a real power price to budget against, from the operator's own file | [MISO Indiana hub now](https://telegraph-provider.vercel.app/api/grid-price?node_or_zone=MISO%20Indiana%20hub), then compare with [N.Y.C. now](https://telegraph-provider.vercel.app/api/grid-price?node_or_zone=NYC) |
+
+Of the 41 miners on this Intent, this is the only one serving NYISO and MISO; the others are mostly CAISO-only or European. A dispatch agent that compares two North American markets therefore needs this miner.
+
+These rows say what the miner can serve. They are not a claim that a mission app has already been accepted on it.
+
 ## Paid usage on Telegraph
 
 Buyers on Telegraph have paid for this miner's answers. As of 26 Nov 2026, Anjoman's Activity page shows registration #6129 earned **$0.1197 USDC** in **10 separate periods** between #18 and #55, claimable to the miner's fee wallet `0xd020…8484`. The largest single period was #25 ($0.052 paid). Earnings came back period after period over several weeks, not in one burst. On 26 Nov 2026 the $0.1197 USDC was claimed on camera in the [demo video](https://x.com/kingChrys494/status/2126013019054633373); the claim transaction ([0x81cdf8c6…7f6f32](https://sepolia.etherscan.io/tx/0x81cdf8c69f8b1c9c1b07a4aac21f1a8adc8e5759a8eb4566513cd6a92e7f6f32)) shows Success on the Sepolia testnet explorer: 0.119679 USDC sent to the miner's fee wallet.
