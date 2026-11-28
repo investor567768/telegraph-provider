@@ -1,8 +1,9 @@
 # Telegraph Provider
 
 **Track:** Miners / Providers · **Network:** Telegraph testnet (Ethereum Sepolia)
-**Live endpoint:** https://telegraph-provider.vercel.app/api/grid-price
+**Live endpoints:** https://telegraph-provider.vercel.app/api/grid-price · https://telegraph-provider.vercel.app/api/route-eta
 **Registered miner:** slug `chrysolite-telegraph-provider`, YAML id `7319205`, registration **#6129**, status **LIVE** (registered 19 Nov 2026, tx `0x20364b622e376235…451651e8`)
+**Second registered miner:** slug `chrysolite-border-aware-route-eta`, YAML id `7319206`, registration **#6224**, status **LIVE** (registered 28 Nov 2026). It is described under [Second miner: Border-Aware Freight Route ETA](#second-miner-border-aware-freight-route-eta); the rubric table below is about the grid miner.
 
 A Telegraph miner for `GRID_POWER_PRICE_GENERAL` that answers wholesale electricity prices for **three US grid operators (CAISO, NYISO and MISO)** straight from each operator's own public price file. It never estimates: when it cannot answer, it says why.
 
@@ -28,7 +29,7 @@ Source: the [official Season II rules](https://anjoman.ai/dashboard/hackathon/se
 | Check it | Every answer names the operator, the exact interval in UTC, the operator's own time stamp and the source file. Compare the number with that file, or open the [public accuracy run](https://github.com/investor567768/telegraph-provider/actions/runs/44534807922) (24 of 24 match). |
 | Inspect it | Anjoman → Activity shows registration #6129 and its paid periods ([screenshot](miner-6129-earnings.png), $0.1197 USDC across 10 periods). The claim transaction is on the [Sepolia explorer](https://sepolia.etherscan.io/tx/0x81cdf8c69f8b1c9c1b07a4aac21f1a8adc8e5759a8eb4566513cd6a92e7f6f32). |
 | Break it | Ask for something it should not answer: [ERCOT](https://telegraph-provider.vercel.app/api/grid-price?node_or_zone=ERCOT%20Houston%20hub) (refused with a 404 and a reason), a date in the future, or a place that does not exist. It refuses instead of guessing. |
-| Reproduce it | `git clone https://github.com/investor567768/telegraph-provider`, then `npm test` (26 tests, Node 18+). The daily [accuracy workflow](https://github.com/investor567768/telegraph-provider/actions/workflows/accuracy.yml) and [test/accuracy.ps1](test/accuracy.ps1) repeat the live check. |
+| Reproduce it | `git clone https://github.com/investor567768/telegraph-provider`, then `npm test` (37 tests, Node 18+). The daily [accuracy workflow](https://github.com/investor567768/telegraph-provider/actions/workflows/accuracy.yml) and [test/accuracy.ps1](test/accuracy.ps1) repeat the live check. |
 
 ## For judges (5 minutes)
 
@@ -48,6 +49,7 @@ Source: the [official Season II rules](https://anjoman.ai/dashboard/hackathon/se
 | Miner | Intent | Registration | Mission | Network |
 |---|---|---|---|---|
 | `chrysolite-telegraph-provider` (YAML id `7319205`) | `GRID_POWER_PRICE_GENERAL` | #6129, LIVE | 12 Mining & Power | Telegraph testnet (Ethereum Sepolia) |
+| `chrysolite-border-aware-route-eta` (YAML id `7319206`) | `ROUTE_ETA_GENERAL` | #6224, LIVE | 06 Resources & Agriculture | Telegraph testnet (Ethereum Sepolia) |
 
 **What it enables.** An app that decides when to draw or curtail power (a data-centre scheduler, an EV fleet, a bitcoin miner) can buy an operator-published price for an exact interval, with the source file, instead of a guessed or smoothed number. Mission 12 builders can test an app against it today: [N.Y.C. now](https://telegraph-provider.vercel.app/api/grid-price?node_or_zone=NYC), [CAISO SP15](https://telegraph-provider.vercel.app/api/grid-price?node_or_zone=SP15).
 
@@ -65,6 +67,34 @@ Source: the [official Season II rules](https://anjoman.ai/dashboard/hackathon/se
 Of the 41 miners on this Intent, this is the only one serving NYISO and MISO; the others are mostly CAISO-only or European. A dispatch agent that compares two North American markets therefore needs this miner.
 
 These rows say what the miner can serve. They are not a claim that a mission app has already been accepted on it.
+
+The second miner, `ROUTE_ETA_GENERAL`, is listed on Mission 06 as a shared network-wide Intent:
+
+| Mission | Where the Intent appears | What a builder can do with this miner | Repeatable test |
+|---|---|---|---|
+| 06 Resources & Agriculture | Listed as a shared Intent on the mission page | Plan a freight or produce haul with the driving time, every border crossed in order, a truck time and a ferry flag, instead of one bare number | [Lagos to Accra](https://telegraph-provider.vercel.app/api/route-eta?origin=Lagos&destination=Accra): four countries, three borders. Compare the order of countries with a map. |
+
+## Second miner: Border-Aware Freight Route ETA
+
+Registration **#6224**, YAML id `7319206`, Intent `ROUTE_ETA_GENERAL`, LIVE since 28 Nov 2026. It answers the scored `duration` field in seconds, plus extras a freight planner needs:
+
+- driving time and distance (public OSRM server),
+- every border crossed, in order, with the countries on the route,
+- a truck time and a ferry flag (public Valhalla server),
+- the place names it resolved (Nominatim), so you can see what it understood.
+
+It never guesses a place. If a name could mean two different countries (a bare "Lagos" matches both Nigeria and Portugal) and nothing in the request settles it, it returns a 422 with the options instead of picking one. Add the country, for example "Lagos, Nigeria".
+
+**What we do not claim.** No live traffic: times are typical driving times. The truck time is an extra, not the scored field, and is estimated by a public routing server; it looks conservative. Anjoman shows 20 miners on this Intent and 42 requests in the last 30 days, which includes free-trial and test traffic, so we claim no paid usage, no mission app and no ranked routing for it yet.
+
+| Try it | Link |
+|---|---|
+| Borders in order | [Lagos to Accra](https://telegraph-provider.vercel.app/api/route-eta?origin=Lagos&destination=Accra) |
+| A short trip | [Lagos to Ibadan](https://telegraph-provider.vercel.app/api/route-eta?origin=Lagos&destination=Ibadan) |
+| Another region | [Nairobi to Mombasa](https://telegraph-provider.vercel.app/api/route-eta?origin=Nairobi&destination=Mombasa) |
+| Break it (refused with options, not guessed) | [Lagos to a point in the Sahara](https://telegraph-provider.vercel.app/api/route-eta?origin=Lagos&destination=21.8,-2.8) |
+| In the browser | [Try-it box on the site](https://telegraph-provider.vercel.app/#route) |
+| Reproduce it | `npm test` runs 11 route tests with mocked services, no network needed. |
 
 ## Paid usage on Telegraph
 
@@ -148,7 +178,7 @@ Errors are explicit, never a guessed price: unknown location (404), operator not
 | Daily accuracy runs (public logs and Summary tables) | [Actions → Grid price accuracy](https://github.com/investor567768/telegraph-provider/actions/workflows/accuracy.yml) |
 | First run, 24 of 24 | [run 44534807922](https://github.com/investor567768/telegraph-provider/actions/runs/44534807922) |
 | Accuracy script (independent of the miner's code) | [test/accuracy.ps1](test/accuracy.ps1) |
-| Unit tests (26, including the real CAISO file of 13 Sep 2026 and a real zip holding the clock-change hour) | [test/](test/) · run `npm test` |
+| Unit tests (37: 26 grid and 11 route, including the real CAISO file of 13 Sep 2026 and a real zip holding the clock-change hour) | [test/](test/) · run `npm test` |
 | Independent test, 26 Nov 2026 | Jennycruzy (Discord, builder of [MONEY OWED](https://github.com/Jennycruzy/moneyowed)) checked 12 live answers against files she downloaded from the operators herself: 10 matched, 2 failed. Both fixed in [e9b7551](https://github.com/investor567768/telegraph-provider/commit/e9b7551). Her rerun the same day, again against her own operator files: **15 of 15 match**, including both edges of the repeated clock-change hour (04:55Z, 05:55Z, 06:55Z) and a day from the October monthly archive. This was a reciprocal test between two entrants: we also tested her project and filed [issues #2](https://github.com/Jennycruzy/moneyowed/issues/2) and [#3](https://github.com/Jennycruzy/moneyowed/issues/3) on it. Her report was written on her own and is public. [Her report](https://github.com/investor567768/telegraph-provider/issues/1) |
 | Public showcase post, Telegraph Discord (26 Nov 2026) | [Showcase post](https://discord.com/channels/1438396125609463881/1573045614634209341/1575573243824177152) |
 | Registered YAML | [miner.yaml](miner.yaml) |
