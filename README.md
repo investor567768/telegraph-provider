@@ -94,6 +94,8 @@ It never guesses a place. If a name could mean two different countries (a bare "
 | Another region | [Nairobi to Mombasa](https://telegraph-provider.vercel.app/api/route-eta?origin=Nairobi&destination=Mombasa) |
 | Break it (refused with options, not guessed) | [Lagos to a point in the Sahara](https://telegraph-provider.vercel.app/api/route-eta?origin=Lagos&destination=21.8,-2.8) |
 | In the browser | [Try-it box on the site](https://telegraph-provider.vercel.app/#route) |
+| Watch it | [Public post on X with a 38-second demo video](https://x.com/kingChrys494/status/2126728335262691482) (28 Nov 2026): Lagos to Accra with borders in order, a route typed by hand, and a refused ambiguous place |
+| Showcase | [Post in the Telegraph Discord showcase](https://discord.com/channels/1438396125609463881/1573045614634209341/1576288514222456866) (28 Nov 2026), with the same try-it link and the two limits stated openly |
 | Reproduce it | `npm test` runs 11 route tests with mocked services, no network needed. |
 
 ## Paid usage on Telegraph
